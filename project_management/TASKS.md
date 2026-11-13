@@ -26,7 +26,23 @@
 
 ## Phase 3 - next (not started)
 
-- [ ] Add SQLite/SQLAlchemy models and repository/transaction boundaries.
-- [ ] Implement request intake with required Idempotency-Key and canonical payload hash.
-- [ ] Enforce `(workflow_id, idempotency_key)` uniqueness in the database.
-- [ ] Add request creation/status endpoint and idempotency integration/failure tests.
+- [x] Add SQLAlchemy 2 models for requests, executions, audit events, decisions, retry jobs,
+  and workflow config snapshots.
+- [x] Add SQLite session lifecycle, foreign-key enforcement and UTC timestamp handling.
+- [x] Persist validated versioned config snapshots/checksums; select the highest configured
+  version deterministically until explicit activation exists.
+- [x] Add version-specific structural input schemas.
+- [x] Implement atomic request/execution/initial-audit intake with scoped database
+  idempotency and canonical payload hashing.
+- [x] Add request POST/status and workflow list/version endpoints with structured errors.
+- [x] Test API validation, persistence, replay, conflict, rollback, config pinning and
+  controlled file-backed concurrent duplicate submissions.
+- [x] Run full regression suite and final health/import checks.
+
+## Phase 4 - next (not started)
+
+- [ ] Implement legal workflow state transitions and stage orchestration.
+- [ ] Execute configured rule evaluation stages using the existing pure rule engine.
+- [ ] Add deterministic external dependency simulator and stable operation keys.
+- [ ] Persist bounded retry jobs and provide a retry processing command or endpoint.
+- [ ] Add integration/failure tests for execution, dependency failures and retries.

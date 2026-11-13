@@ -1,0 +1,15 @@
+type: object
+required: [vendor]
+properties:
+  vendor:
+    type: object
+    required: [registration_status, compliance, annual_turnover]
+    properties:
+      registration_status: {type: string}
+      compliance:
+        type: object
+        required: [tax_clearance, sanctions_clear]
+        properties:
+          tax_clearance: {type: boolean}
+          sanctions_clear: {type: boolean}
+      annual_turnover: {type: number}

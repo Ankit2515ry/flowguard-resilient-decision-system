@@ -50,6 +50,21 @@ Use SQLAlchemy 2 typed mappings and short explicit transaction scopes. For every
 update execution/request state and append its audit event in the same commit. Store decision
 and retry rows in that transaction when produced. External calls occur between transactions.
 
+Phase 3 creates the schema with SQLAlchemy metadata at startup; Alembic is deferred. Each
+request transaction inserts `WorkflowRequest`, its one-to-one `WorkflowExecution`, and audit
+sequence 1 together. UTC-aware application timestamps are normalized by a SQLAlchemy type
+adapter because SQLite does not retain timezone metadata. SQLite foreign keys are enabled on
+every connection. The test suite uses a separate temporary SQLite file per app instance.
+
+Idempotency hashes canonical JSON containing `workflow_id` and `data` (`sort_keys=True`,
+compact separators, UTF-8, non-finite numbers rejected). `config_version` is deliberately
+excluded so a retry after an active-version change resolves to its already accepted request.
+The database unique key is `(workflow_id, idempotency_key)`. A new request and execution are
+created at `RECEIVED`, with the configured entry stage recorded but not executed. New intake
+returns 202; same-hash replay returns 200 and the current stored state; changed-payload replay
+returns 409. A composite foreign key from `(workflow_id, config_version)` to the immutable
+workflow snapshot prevents requests from pinning an absent version.
+
 ## Retry worker
 
 Select due jobs, process with a bounded attempt policy, and update job plus workflow/audit

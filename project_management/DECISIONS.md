@@ -45,3 +45,23 @@
 - Missing ordinary comparison fields produce explicit failed traces and follow that rule's
   configured failure action. `exists` handles optional presence explicitly. Incompatible
   comparison types raise `RuleEvaluationError` to prevent silent coercion or decisions.
+
+## Phase 3 choices
+
+- SQLAlchemy metadata creates the initial schema at app startup; Alembic remains deferred.
+- SQLite foreign keys are enabled per connection. `BEGIN IMMEDIATE` serializes SQLite
+  transactions before the idempotency lookup, avoiding deferred lock-upgrade races. The MVP
+  assumes one application process; SQLite write throughput is intentionally limited.
+- Startup snapshots the exact validated workflow model plus a version-specific structural
+  input schema and checksum. Existing `(workflow_id, version)` content is immutable; changed
+  content under the same version prevents startup. Until Phase 5, highest numeric version is
+  selected active at startup.
+- Canonical idempotency hash covers workflow ID and `data`, not active config version. A
+  repeated request after a version change therefore returns the original pinned request.
+- Request creation, initial execution (`RECEIVED`) and audit sequence 1 share one transaction.
+  Stage execution is intentionally deferred. New intake returns 202; matching replay returns
+  200 with `Idempotency-Replayed: true`; payload mismatch returns 409.
+- Requests have a composite foreign key to the persisted `(workflow_id, config_version)`
+  snapshot, enforcing version pin integrity at the database boundary.
+- Input shape/type requirements live in per-version `configs/input_schemas` YAML sidecars;
+  eligibility thresholds remain only in the workflow rule configuration.

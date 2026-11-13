@@ -8,12 +8,11 @@ not require a separate frontend or distributed infrastructure.
 
 ## Phase sequence and timebox
 
-1. **Repository scaffold, architecture, tracking** — 30 min. Scaffold package, health API,
-   docs and memory; verify smoke test. (Current phase.)
+1. **Repository scaffold, architecture, tracking** — 30 min. Complete; smoke test verified.
 2. **Configuration and rule engine** — 60 min. Load/validate immutable YAML versions;
-   implement deterministic safe operators and traces.
+   implement deterministic safe operators and traces. Complete; 27 tests passed.
 3. **Database, intake API, idempotency** — 70 min. Persistence models and atomic uniqueness;
-   canonical payload hash and conflict behavior.
+   canonical payload hash and conflict behavior. Complete; Phase 3 evidence in `TEST_RESULTS.md`.
 4. **Workflow orchestration and retries** — 65 min. Legal state transitions, stage execution,
    deterministic dependency simulator, persisted bounded retry worker.
 5. **Audit, manual review, configuration changes** — 45 min. Atomic state/audit writes,
@@ -33,3 +32,8 @@ integration, failure and smoke tests. Every externally visible state change must
 
 Correctness, deterministic behavior, idempotency, auditability, configuration validation,
 and test evidence take precedence over deployment infrastructure and optional features.
+
+## Current handoff
+
+Phases 1-3 are complete. Phase 4 workflow orchestration and retry handling is next but has not
+started; proceed only after explicit user instruction.

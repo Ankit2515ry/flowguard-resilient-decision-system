@@ -23,9 +23,10 @@ sequenceDiagram
   A-->>C: response
 ```
 
-The sequence describes the intended complete platform; in Phase 1 only the API process and
-health route exist. Later implementation may split intake persistence and stage execution
-into multiple short transactions around external calls.
+The complete sequence is the intended platform. Phase 3 currently implements the intake
+through persistence and returns at `RECEIVED`; evaluation and external stages are not run.
+Later implementation may split stage execution into multiple short transactions around
+external calls.
 
 ## Data records (planned)
 
@@ -46,9 +47,15 @@ state machine explicitly defines allowed edges; API handlers do not mutate state
 admin activation, review queue/resolve, retry processing, and `GET /health`. FastAPI Swagger
 UI is the initial operator/client interface.
 
+Phase 3 implements request creation and status, workflow list, workflow versions, and health.
+The new request and an equivalent idempotent replay return HTTP 202 and 200 respectively;
+replay responses carry `Idempotency-Replayed: true`. Request status remains `RECEIVED`, with
+no decision until later workflow execution.
+
 ## Reliability boundary
 
-The MVP assumes one application/retry worker against SQLite. Persisted retries survive
+The MVP assumes one application/retry worker against SQLite. The current engine acquires
+SQLite's write reservation at transaction start, so writes serialize. Persisted retries survive
 process restart, but a crash after an external side effect and before local commit can repeat
 the call. Stable operation keys and an idempotent simulator reduce that risk; true exactly
 once behavior requires cooperation from the dependency.

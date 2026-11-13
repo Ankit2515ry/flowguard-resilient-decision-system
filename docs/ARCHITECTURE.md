@@ -40,6 +40,22 @@ flowchart LR
   explicit.
 - Validate every stage reference and graph edge before making a config version active.
 
+## Phase 3 persistence and intake
+
+`app/persistence` owns SQLAlchemy 2 models, the SQLite engine/session factory and repository
+queries. `app/services/request_intake.py` normalizes the workflow ID plus JSON data for SHA-256
+idempotency, validates the selected version's structural schema, then inserts the request,
+execution and initial audit event in one transaction. The scoped unique key in SQLite is the
+authority during concurrent submissions. SQLite transactions acquire a write reservation at
+begin (`BEGIN IMMEDIATE`) to avoid deferred read-to-write races; this serializes writers and
+is appropriate only for the single-process MVP.
+
+At startup, the existing validated YAML definitions are combined with versioned input schema
+files, checksummed and persisted as `WorkflowConfig` snapshots. The greatest configured
+version is active per workflow until explicit activation is implemented. Replacing content
+under an existing version/checksum fails startup. A request stores the selected version and
+does not trigger stage execution in Phase 3.
+
 ## Configuration lifecycle
 
 Load YAML into typed models, validate local expressions and graph-wide references, then

@@ -2,28 +2,44 @@
 
 ## State
 
-Phases 1 and 2 are complete. A project-root `.venv` using Python 3.11.9 is installed and
-ready. The FastAPI `/health` route remains intact. `app.engine.config` loads and validates
-immutable YAML workflow definitions; `app.engine.rules` evaluates rule sets and returns
-deterministic traces. The three example versions are under `configs/workflows/`. The full
-suite passed: 27 passed, with one upstream Starlette deprecation warning (see
-`TEST_RESULTS.md`).
+Phases 1-3 are complete. The project venv is Python 3.11.9. Phase 3 added SQLAlchemy/SQLite
+records, startup schema/snapshot initialization, versioned structural input schemas, atomic
+request/execution/audit creation, database-scoped idempotency, request status, and workflow
+discovery APIs. The complete suite passed: 47 passed, 1 upstream Starlette deprecation
+warning. See `TEST_RESULTS.md` for commands and coverage.
 
 ## Exact next phase (not started)
 
-Phase 3: introduce SQLAlchemy 2/SQLite persistence records and repository transaction scopes;
-implement request creation with required Idempotency-Key and canonical request hashing;
-enforce uniqueness on `(workflow_id, idempotency_key)` in the database; return existing
-requests for equivalent replays and 409 for same-key/different-payload; add request API and
-integration/failure tests. Preserve config version IDs for later request pinning. Do not
-begin Phase 3 until explicitly requested.
+Phase 4 only after explicit instruction:
+
+1. Define and enforce legal execution/request state transitions.
+2. Orchestrate configured stages, using the existing rule engine without moving business rules
+   into API controllers.
+3. Keep external calls outside database transactions and use stable operation keys.
+4. Implement the deterministic dependency simulator.
+5. Persist bounded retry jobs and add a retry command or endpoint.
+6. Add deterministic success, failure, retry, and recovery tests.
+
+Do not add Phase 5 review/activation behavior or Phase 6 broad regression scope unless asked.
+
+## Phase 3 contracts to preserve
+
+- Unique `(workflow_id, idempotency_key)` is database-enforced. Canonical hash covers
+  workflow ID + JSON data. Matching replay returns HTTP 200 and `Idempotency-Replayed: true`;
+  changed payload returns 409.
+- Request + execution + initial audit record commit atomically in state `RECEIVED`.
+- A request pins a persisted, checksummed `(workflow_id, config_version)` snapshot.
+- Until activation is added, highest configured version is selected at application startup.
+- SQLite foreign keys are on; writes use `BEGIN IMMEDIATE`. Concurrency verification used a
+  temporary file-backed SQLite database and two simultaneous client submissions.
+- Tests must use isolated temporary databases, never the default `flowguard.db`.
 
 ## Known limitations / unresolved defects
 
-- No known Phase 1 or Phase 2 defects.
-- Persistence, request intake, workflow execution, audit storage, retry handling and review
-  operations remain unimplemented and must not be presented as complete.
-- Rule evaluation raises `RuleEvaluationError` for incompatible operand types; API error
-  mapping will be defined in a later phase.
-- Retry processing, when implemented, will initially assume one worker process; multi-worker
-  claiming/leases and exactly-once external side effects are outside the MVP contract.
+- No known Phase 3 defects.
+- Phase 3 intentionally does not execute stages, evaluate rules for requests, create decisions,
+  expose audit history, retry dependencies, or provide explicit config activation.
+- SQLite serializes writers and is a single-process MVP store; move to a server DB/leased job
+  claim design only when scaling requirements warrant it.
+- Schema is initialized through SQLAlchemy `create_all`; Alembic migrations are deferred.
+- The suite reports the existing upstream Starlette TestClient/httpx deprecation warning.
