@@ -22,10 +22,16 @@ export interface RequestOptions {
   signal?: AbortSignal
 }
 
-export async function apiRequest<T>(
+export interface ApiResponse<T> {
+  data: T
+  status: number
+  headers: Headers
+}
+
+export async function apiRequestWithResponse<T>(
   path: string,
   options: RequestOptions & { method?: string; body?: unknown } = {},
-): Promise<T> {
+): Promise<ApiResponse<T>> {
   const headers = new Headers(options.headers)
   if (options.body !== undefined) headers.set('Content-Type', 'application/json')
 
@@ -57,5 +63,13 @@ export async function apiRequest<T>(
     )
   }
 
-  return payload as T
+  return { data: payload as T, status: response.status, headers: response.headers }
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: RequestOptions & { method?: string; body?: unknown } = {},
+): Promise<T> {
+  const result = await apiRequestWithResponse<T>(path, options)
+  return result.data
 }

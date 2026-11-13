@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ArrowUpRight, CircleHelp, Command, FilePlus2, GitBranch, LayoutDashboard, Menu, Search, ShieldCheck, X } from 'lucide-react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { API_BASE_URL } from '../api/client'
 import { useBackendHealth } from '../hooks/useBackendHealth'
 
 const navigation = [
@@ -18,6 +19,7 @@ const pageTitles: Record<string, string> = {
   '/reviews': 'Manual reviews',
   '/workflows': 'Workflow configuration',
 }
+const apiDocsUrl = `${API_BASE_URL || 'http://127.0.0.1:8000'}/docs`
 
 function Sidebar({ onNavigate, mobile = false }: { onNavigate?: () => void; mobile?: boolean }) {
   return (
@@ -46,7 +48,7 @@ function Sidebar({ onNavigate, mobile = false }: { onNavigate?: () => void; mobi
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700"><CircleHelp size={15} className="text-indigo-500" /> Need a hand?</div>
           <p className="text-xs leading-5 text-slate-500">Use the API docs to explore supported workflow behavior.</p>
-          <a href="http://127.0.0.1:8000/docs" target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700">Open API docs <ArrowUpRight size={13} /></a>
+          <a href={apiDocsUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700">Open API docs <ArrowUpRight size={13} /></a>
         </div>
         <div className="mt-4 border-t border-slate-100 px-2 pt-4 text-[11px] text-slate-400">FlowGuard · Operator console</div>
       </div>
