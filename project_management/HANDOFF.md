@@ -1,43 +1,41 @@
 # Handoff
 
-## Verified state
+## Verified local submission state
 
-Phases 1-6 are complete. The requirement-to-code/test/limitation matrix is
-`docs/REQUIREMENTS_TRACEABILITY.md`. Phase 6 added six isolated failure tests and found no
-confirmed production logic defect. Final result: 91 passed, with one upstream Starlette
-TestClient/httpx deprecation warning. Exact commands are recorded in `TEST_RESULTS.md`.
+Phases 1-7 local preparation are complete. The final report is
+`docs/ASSIGNMENT_REPORT.md`; the submission checklist is `docs/SUBMISSION_CHECKLIST.md`.
+The final suite passed **91 tests** with one upstream Starlette TestClient/httpx deprecation
+warning. Editable install, compileall, whitespace check and an in-memory API/Swagger/request
+smoke are recorded in `TEST_RESULTS.md`.
 
-Preserve these contracts: idempotent intake remains 202/200/409; execution is explicit; state
-changes and their audit records commit atomically; requests retain immutable config pins;
-admin token maps to a fixed demo actor; review updates the existing Decision; SQLite and one
-retry worker are assumed. External effects are at-least-once across a crash after provider
-success and before local commit. Do not claim exactly-once execution.
+The source tree is on branch `main`, latest commit at the start of Phase 7 was `2633a26`, and
+no Git remote is configured. Phase 7 changes are local and uncommitted. No GitHub repository
+was created/pushed, no live link is available, and no email was sent. The owner needs to
+review/commit these docs, choose a GitHub destination, push and verify its URL, and supply the
+roll number for the required lowercase email subject.
 
-## Exact next work (Phase 7, not started)
+## Owner's exact remaining actions
 
-Proceed only after explicit Phase 7 instruction:
+1. Run `git status --short` and review the Phase 7 documentation changes.
+2. Stage and commit the desired submission files, for example:
+   `git add .gitignore README.md docs project_management && git commit -m "docs: prepare ScoreMe submission"`.
+3. Create/select the GitHub repository and add its URL as `origin`, for example:
+   `git remote add origin https://github.com/<account>/<repository>.git`.
+4. Push the intended branch with `git push -u origin main` and open the URL to verify the
+   repository contents. This workspace currently has no remote.
+5. Replace `rollno` in `assignment_mnnit_scoreme_rollno` with the actual roll number. Email
+   `it@scoreme.in` with the verified GitHub URL and link or attach `docs/ASSIGNMENT_REPORT.md`.
+6. Confirm ScoreMe's applicable date/time for its stated 7:00 PM deadline.
 
-1. Review README setup/run instructions, Swagger examples, requirement matrix, and known limits
-   for consistency with the implementation.
-2. Verify clean-environment setup with Python 3.11 and `.venv`; run editable install and the
-   documented full test suite.
-3. Start FastAPI, confirm `/health`, open Swagger, and exercise one request/decision using an
-   isolated temporary database. Do not run smoke tests against the persistent developer DB.
-4. Inspect `git status`, diff, ignored artifacts and submission contents. Do not delete local
-   databases or other user data without authorization.
-5. Record final commands, results, warning, unresolved limitations and submission readiness.
+## Known limitations
 
-## Known limitations and local state
-
-- Admin authorization is a shared demo token, not production identity or role management.
-  Review queue reads use the token; audit/explanation endpoints are request-ID scoped and
-  unauthenticated in this MVP.
-- SQLite serializes writers; one retry worker is supported. Leases have no heartbeat.
-- A crash after provider success but before local commit can repeat a provider call. Stable
-  operation keys help only if the provider honors idempotency.
-- Historical audit events may not contain a stage field. Schema initialization is additive
-  SQLite logic; Alembic migration history is deferred.
-- One ignored local `flowguard.db` exists with one APPROVED request and three config snapshots.
-  Its ownership is uncertain. The final tests do not access it; inspect/backup before any
-  cleanup and never delete automatically.
-- The suite has one upstream Starlette TestClient/httpx deprecation warning.
+- Provider effects are at-least-once across a crash after external success and before local
+  commit; exactly-once effects are not claimed.
+- SQLite serializes writers; one retry worker is supported and its leases have no heartbeat.
+- Admin access is a shared demo token, not production authentication/RBAC. Audit and
+  explanation reads are request-ID scoped and unauthenticated in this MVP.
+- Additive SQLite startup schema handling is used; Alembic is deferred.
+- One upstream Starlette TestClient/httpx deprecation warning remains.
+- The ignored developer `flowguard.db` contains one APPROVED request and three config
+  snapshots. Final Phase 7 install/tests/smoke used no persistent database URL; do not delete
+  or modify the existing file without confirming ownership.

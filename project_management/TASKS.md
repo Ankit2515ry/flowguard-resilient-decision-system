@@ -78,10 +78,15 @@
 - [x] Update progress, test results, decisions and handoff with verified outcomes.
 - [x] Run full pytest, compileall and `git diff --check`.
 
-## Phase 7 - submission readiness (not started)
+## Phase 7 - local submission preparation
 
-- [ ] Review README/operator setup and all evidence against a clean environment.
-- [ ] Run the final documented install, test, server, health and Swagger smoke workflow.
-- [ ] Verify repository status and submission contents; preserve local databases unless
-  ownership and cleanup authorization are established.
-- [ ] Record final known limitations and submission readiness.
+- [x] Create the final technical report and submission checklist.
+- [x] Add a prominent Windows PowerShell Quick Start, operations and troubleshooting to README.
+- [x] Audit requirements, report links, trade-offs, tests, credentials and ignore patterns.
+- [x] Verify editable install, full tests, compile, whitespace check, Swagger/OpenAPI and
+  request execution using an isolated in-memory database.
+- [x] Record exact outcomes, limitations and handoff.
+- [ ] Owner creates/selects GitHub repository, adds remote, reviews/commits changes, pushes,
+  and verifies the public/private repository URL. Publishing was not authorized/performed.
+- [ ] Owner supplies roll number, sends the required email to `it@scoreme.in`, and includes
+  verified GitHub link plus the report. Email was not sent.

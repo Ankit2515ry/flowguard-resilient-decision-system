@@ -4,6 +4,18 @@ This matrix maps the FlowGuard assignment requirements to implementation and exe
 evidence. Tests listed are deterministic and use in-memory or per-test temporary SQLite
 databases; `flowguard.db` is not a test database.
 
+## Evaluation rubric cross-check
+
+| ScoreMe criterion | Evidence in submission | Boundary |
+|---|---|---|
+| Problem structuring (20) | `docs/ASSIGNMENT_REPORT.md` objective/lifecycle sections; request, rule, retry and review paths in the API | MVP domain is loan/vendor approval examples, designed as a generic configured engine |
+| Architecture (20) | This matrix; `docs/ARCHITECTURE.md`, `HLD.md`, `LLD.md`; modular `app/` packages | Single-process SQLite modular monolith |
+| Robustness (20) | Idempotency constraints, legal transitions, retry leases, atomic audit/state and Phase 6 commit-failure/concurrency tests | External side effects remain at-least-once; one retry worker |
+| Configurability (15) | YAML workflows, versioned snapshots, validation and activation in `app/engine/` and `app/services/` | Cycles and arbitrary user code are intentionally unsupported |
+| Explainability (10) | Persisted `RuleTrace`, audit and explanation APIs; `docs/DECISION_EXAMPLES.md` | Historical audit events may lack stage values; traces can include evaluated input values |
+| Testing (10) | Unit, integration and failure suites; exact final evidence in `project_management/TEST_RESULTS.md` | Deterministic simulator, not a real provider certification |
+| Trade-offs (5) | `docs/TRADEOFFS.md`, scaling and limitations in the report | Alembic, distributed workers and production identity remain future work |
+
 | Requirement | Implementation location | Test evidence | Limitations |
 |---|---|---|---|
 | Python package, FastAPI app, health endpoint, Swagger interface | `pyproject.toml`, `app/main.py` | `tests/integration/test_health.py::test_health_returns_ok`; full suite | Swagger is API docs, no separate frontend |

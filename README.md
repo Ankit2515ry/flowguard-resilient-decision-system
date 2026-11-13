@@ -1,10 +1,58 @@
 # FlowGuard
 
-FlowGuard is a configurable workflow decision platform. Phases 1-5 provide FastAPI, a
+FlowGuard is a configurable workflow decision platform. Phases 1-6 provide FastAPI, a
 versioned YAML rule engine, SQLite-backed idempotent intake, explicit workflow execution,
 audit and explanation APIs, manual review, explicit workflow version activation, an external
 verification simulator, and persisted bounded retries. Requests are accepted first and
 execute only when explicitly triggered.
+
+## Quick Start (Windows PowerShell)
+
+Requirements: Python 3.11+ and pip. Run these commands from the repository root:
+
+```powershell
+py -3.11 -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
+
+# The SQLite schema and validated workflow snapshots are initialized at server startup.
+# This relative URL uses flowguard.db under the current working directory.
+$env:FLOWGUARD_DATABASE_URL = "sqlite:///./flowguard.db"
+$env:FLOWGUARD_ADMIN_TOKEN = "local-demo-token-change-me"
+$env:FLOWGUARD_SIMULATOR_SCENARIO = "SUCCESS"
+python -m uvicorn app.main:app --reload
+```
+
+Open Swagger UI at <http://127.0.0.1:8000/docs>. Submit `POST /api/v1/requests` with an
+`Idempotency-Key`, then explicitly call `POST /api/v1/requests/{request_id}/execute` using
+the returned `status_url` plus `/execute`. The full request example is in
+[Submit and execute a request](#submit-and-execute-a-request).
+
+To process due retries, run `.venv\Scripts\python.exe -m app.workers.retry_worker --once`
+in another PowerShell window with the same database and simulator environment variables.
+Run the regression suite with `.venv\Scripts\python.exe -m pytest -q`.
+
+To switch rules, use `POST /api/v1/admin/workflows/activate` with `X-Admin-Token`; see
+[Activate workflow versions](#activate-workflow-versions). For manual review, use the
+authenticated review queue and resolve endpoint described in
+[Manual review and admin authentication](#manual-review-and-admin-authentication).
+
+Architecture: [ARCHITECTURE](docs/ARCHITECTURE.md), [HLD](docs/HLD.md), [LLD](docs/LLD.md),
+[trade-offs](docs/TRADEOFFS.md), [assignment report](docs/ASSIGNMENT_REPORT.md),
+[decision examples](docs/DECISION_EXAMPLES.md), [requirement traceability](docs/REQUIREMENTS_TRACEABILITY.md),
+[submission checklist](docs/SUBMISSION_CHECKLIST.md), [test evidence](project_management/TEST_RESULTS.md).
+
+### Quick troubleshooting
+
+- Confirm Python with `python --version`; use the `.venv` interpreter if activation is blocked
+  by PowerShell execution policy.
+- Database paths are relative to the current directory. Existing `flowguard.db` files retain
+  their data; choose a new filename for a clean demo.
+- Protected review/activation endpoints need `FLOWGUARD_ADMIN_TOKEN`; unset server config
+  returns 503, missing token returns 401, and an incorrect token returns 403.
+- A retry may not be due yet. Check its configured delay or set
+  `FLOWGUARD_RETRY_BASE_DELAY_SECONDS=0` for a local demo, then run the one-shot worker.
+- If the port is occupied, stop the other local server or choose another Uvicorn port.
 
 ## Requirements and installation
 

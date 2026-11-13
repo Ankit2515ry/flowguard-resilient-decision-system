@@ -113,3 +113,27 @@
 - The final health test uses an in-memory database. The local ignored `flowguard.db` remains
   outside test fixtures and is not used by test cases; its ownership remains uncertain (see
   `HANDOFF.md`).
+
+## Phase 7 final submission verification
+
+- `.venv\Scripts\python.exe --version` — Python 3.11.9.
+- Initial editable install was blocked by sandbox network restrictions while pip attempted to
+  download isolated build requirements. Retried with approved network access:
+  `.venv\Scripts\python.exe -m pip install -e ".[dev]"` — succeeded; FlowGuard and dev
+  dependencies were installed/confirmed in `.venv`.
+- `.venv\Scripts\python.exe -m pytest -q` — **91 passed, 1 upstream deprecation warning**.
+- `.venv\Scripts\python.exe -m compileall -q app` — passed.
+- `git diff --check` — passed; Git emitted LF-to-CRLF normalization notices only.
+- Isolated in-process FastAPI smoke used `create_app(database_url="sqlite:///:memory:")`:
+  `/health` returned 200 with `{"status":"ok"}`, `/docs` returned 200, `/openapi.json`
+  returned 200 with 11 paths, request intake returned 202, and explicit execution returned
+  200 with `APPROVED`. The persistent developer database was not used.
+- A GitHub remote is not configured; GitHub publishing and email submission were not
+  performed. See `docs/SUBMISSION_CHECKLIST.md` for manual steps and blockers.
+- Hygiene review: `.gitignore` excludes `.venv`, `.env` (except the blank `.env.example`),
+  SQLite database/WAL/SHM/journal files, Python/test/tool caches, and common secret/key files.
+  No tracked local database or `.env` was found. Credential-pattern matches were limited to
+  clearly labeled local-demo/test-only placeholder tokens; no real credential or local
+  absolute Windows path/personal name was found in final-facing docs.
+- Git state: branch `main`, base commit `2633a26`, no configured remote. Phase 7 working-tree
+  changes are documentation and project memory; they remain uncommitted for owner review.

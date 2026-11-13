@@ -2,7 +2,7 @@
 
 ## Current status
 
-Phases 1-6 are complete and verified. FlowGuard accepts idempotent requests, executes
+Phases 1-7 local preparation are complete and verified. FlowGuard accepts idempotent requests, executes
 explicitly triggered pinned workflows, exposes persisted audit/explanation, resolves manual
 review atomically, persists admin version activation, and resumes bounded retries with a
 one-shot worker.
@@ -79,7 +79,19 @@ one-shot worker.
 - At-least-once external execution remains a documented limitation; see `DECISIONS.md` and
   `HANDOFF.md`.
 
-## Next
+## Phase 7 evidence
 
-Phase 7 is next, only when requested: final clean-environment verification and submission
-readiness. See `TASKS.md` and `HANDOFF.md`.
+- Created `docs/ASSIGNMENT_REPORT.md` and `docs/SUBMISSION_CHECKLIST.md`; added a prominent
+  README Quick Start, API workflows, troubleshooting and documentation links.
+- `.venv` install succeeded after network access was approved. Python reports 3.11.9.
+- Final suite: **91 passed, 1 upstream warning**; compileall and `git diff --check` passed.
+- Isolated FastAPI smoke verified `/health` 200, `/docs` 200, `/openapi.json` 200 with 11
+  paths, request intake 202, and execution 200 / `APPROVED` using SQLite memory.
+- Hygiene review confirmed `.venv`, `.env`, SQLite db/WAL/SHM/journal and common Python cache
+  patterns are ignored. No real credentials or local absolute Windows paths were found in
+  final-facing documentation. `.env.example` contains a blank admin token.
+- Git working tree contains the Phase 7 documentation/memory changes; branch is `main`, latest
+  commit is `2633a26`, and no Git remote is configured. No GitHub repository was created or
+  pushed, and no email was sent.
+- Owner actions remain: choose GitHub repository, review/commit/push and verify its URL; supply
+  roll number and manually email `it@scoreme.in` with that URL and the report.
