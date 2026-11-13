@@ -67,9 +67,21 @@
 - [x] Update operator/API docs, examples and project memory.
 - [x] Run the full suite, compile check and whitespace check; see `TEST_RESULTS.md`.
 
-## Phase 6 - failure and regression coverage (not started)
+## Phase 6 - failure and regression coverage
 
-- [ ] Expand broad failure/integration/regression coverage for malformed configs, provider
-  failures, duplicate requests, retry recovery, invalid lifecycle state and config changes.
-- [ ] Fix defects evidenced by those failure tests; preserve Phase 1-5 contracts.
-- [ ] Record exact verification and unresolved defects before Phase 7.
+- [x] Audit the assignment requirements against implementation and existing test evidence.
+- [x] Verify provider failures, retries/exhaustion, worker recovery, duplicate/idempotency
+  behavior, manual review conflicts, active-version persistence and pinned requests.
+- [x] Add isolated failure tests for admin auth, review/activation commit rollback, discovered
+  config versions, and duplicate finalized execution.
+- [x] Create `docs/REQUIREMENTS_TRACEABILITY.md` with implementation, test evidence and limits.
+- [x] Update progress, test results, decisions and handoff with verified outcomes.
+- [x] Run full pytest, compileall and `git diff --check`.
+
+## Phase 7 - submission readiness (not started)
+
+- [ ] Review README/operator setup and all evidence against a clean environment.
+- [ ] Run the final documented install, test, server, health and Swagger smoke workflow.
+- [ ] Verify repository status and submission contents; preserve local databases unless
+  ownership and cleanup authorization are established.
+- [ ] Record final known limitations and submission readiness.

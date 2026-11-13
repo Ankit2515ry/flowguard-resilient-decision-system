@@ -2,7 +2,7 @@
 
 ## Current status
 
-Phases 1-5 are complete and verified. FlowGuard accepts idempotent requests, executes
+Phases 1-6 are complete and verified. FlowGuard accepts idempotent requests, executes
 explicitly triggered pinned workflows, exposes persisted audit/explanation, resolves manual
 review atomically, persists admin version activation, and resumes bounded retries with a
 one-shot worker.
@@ -66,8 +66,20 @@ one-shot worker.
   `flowguard.db`. That ignored file contains one existing APPROVED request and was left intact
   because its ownership is uncertain.
 
+## Phase 6 evidence
+
+- Audited assignment requirements against implementation and existing test coverage; added
+  `docs/REQUIREMENTS_TRACEABILITY.md` with code locations, named tests and limitations.
+- Added six isolated failure tests for incorrect/unconfigured admin tokens, failed review and
+  activation commits, newly discovered config version registration, and finalized execution
+  replay. No production logic defect was confirmed, so runtime code was not changed.
+- Original Phase 5 baseline: **85 passed, 1 warning**. Phase 6 final suite: **91 passed,
+  1 warning**. The single warning remains Starlette's upstream TestClient/httpx deprecation.
+- Tests use temporary or in-memory databases and do not use the developer's persistent DB.
+- At-least-once external execution remains a documented limitation; see `DECISIONS.md` and
+  `HANDOFF.md`.
+
 ## Next
 
-Phase 6 is next, only when requested: broaden failure and regression coverage, fix defects
-found, then prepare final verification/submission work in Phase 7. See `TASKS.md` and
-`HANDOFF.md`.
+Phase 7 is next, only when requested: final clean-environment verification and submission
+readiness. See `TASKS.md` and `HANDOFF.md`.

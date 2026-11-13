@@ -86,7 +86,30 @@
 - Warning remains the upstream Starlette TestClient/httpx deprecation warning.
 - The first Phase 5 full-suite attempt exposed that the health test still used the module-level
   app and opened the default `flowguard.db`. `tests/integration/test_health.py` now creates an
-  in-memory app. The final full-suite rerun passed and did not change the database timestamp.
+  in-memory app. All Phase 6 test fixtures use an in-memory or `tmp_path` database URL.
   Read-only inspection found one APPROVED request and three config snapshots in the ignored
   local file; ownership is uncertain, so it was left untouched rather than deleted.
 - Phase 6 broad failure/regression scope remains not started.
+
+## Phase 6 robustness audit and failure paths
+
+- Original test baseline: **85 passed, 1 warning**. Added six deterministic failure/integration
+  cases; final result: **91 passed, 1 warning**.
+- New test file: `tests/failure/test_phase6_failure_paths.py`. Its targeted run passed **6/6**.
+  Cases cover wrong and unconfigured admin credentials, atomic rollback after review and
+  activation commit failures, newly discovered versions remaining inactive, and repeated
+  execution of a finalized request preserving one decision and unchanged audit history.
+- Existing tests were audited for invalid schema, idempotency conflict/replay, concurrent
+  submissions, dependency timeouts/permanent failures, retry recovery/exhaustion, worker
+  process restart/expired lease, partial intake/execution DB failures, activation restart and
+  version pinning, manual review conflict/concurrency, and audit/explanation consistency.
+- Requirement mapping: `docs/REQUIREMENTS_TRACEABILITY.md`.
+- Confirmed runtime defect: none. Remaining at-least-once provider limitation is documented;
+  local transactions cannot undo an external side effect after a crash.
+- Final commands:
+  `.venv\Scripts\python.exe -m pytest -q` — 91 passed, 1 warning;
+  `.venv\Scripts\python.exe -m compileall -q app` — passed;
+  `git diff --check` — passed with LF-to-CRLF normalization notices and no whitespace errors.
+- The final health test uses an in-memory database. The local ignored `flowguard.db` remains
+  outside test fixtures and is not used by test cases; its ownership remains uncertain (see
+  `HANDOFF.md`).

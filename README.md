@@ -221,4 +221,5 @@ and worker restart cases; they do not use the developer's default database.
 - `app/workers/`: one-shot persisted retry worker
 - `configs/`: immutable workflow versions and per-version input schemas
 - `tests/`: unit, integration and failure-path suites
-- `docs/`, `project_management/`: architecture, decisions, evidence and handoff
+- `docs/`: architecture plus `REQUIREMENTS_TRACEABILITY.md` mapping assignment criteria to code/tests
+- `project_management/`: phase tracking, decisions, verification evidence and handoff

@@ -2,47 +2,42 @@
 
 ## Verified state
 
-Phases 1-5 are implemented. Phase 5 adds ordered audit and explanation APIs, admin-token
-protected review listing/resolution, and persistent workflow version activation. The full
-suite currently reports 85 passed, one upstream Starlette TestClient/httpx deprecation
-warning; final commands/results are recorded in `TEST_RESULTS.md`.
+Phases 1-6 are complete. The requirement-to-code/test/limitation matrix is
+`docs/REQUIREMENTS_TRACEABILITY.md`. Phase 6 added six isolated failure tests and found no
+confirmed production logic defect. Final result: 91 passed, with one upstream Starlette
+TestClient/httpx deprecation warning. Exact commands are recorded in `TEST_RESULTS.md`.
 
-Important contracts: intake remains 202 for new requests and 200 for equivalent replay;
-execution is explicit; every state change is audited atomically; requests retain their pinned
-config version; review updates the existing unique Decision; and only the server-configured
-admin token establishes the fixed `demo-admin` actor. Startup preserves the active version
-after first initialization and registers newly found versions inactive.
+Preserve these contracts: idempotent intake remains 202/200/409; execution is explicit; state
+changes and their audit records commit atomically; requests retain immutable config pins;
+admin token maps to a fixed demo actor; review updates the existing Decision; SQLite and one
+retry worker are assumed. External effects are at-least-once across a crash after provider
+success and before local commit. Do not claim exactly-once execution.
 
-## Exact next work (Phase 6, not started)
+## Exact next work (Phase 7, not started)
 
-Proceed only after an explicit Phase 6 request:
+Proceed only after explicit Phase 7 instruction:
 
-1. Expand deterministic failure/regression coverage across malformed and changed config,
-   provider exceptions/permanent failures, retry exhaustion/recovery, duplicate and concurrent
-   intake/execution/review actions, invalid lifecycle transitions, and activation pinning.
-2. Keep each test on an isolated temporary SQLite database; never use the local `flowguard.db`.
-3. Fix only defects demonstrated by tests while preserving Phase 1-5 endpoint and persistence
-   contracts.
-4. Run the full suite and required compile/whitespace checks; record exact outcomes and any
-   unresolved defects in project memory.
+1. Review README setup/run instructions, Swagger examples, requirement matrix, and known limits
+   for consistency with the implementation.
+2. Verify clean-environment setup with Python 3.11 and `.venv`; run editable install and the
+   documented full test suite.
+3. Start FastAPI, confirm `/health`, open Swagger, and exercise one request/decision using an
+   isolated temporary database. Do not run smoke tests against the persistent developer DB.
+4. Inspect `git status`, diff, ignored artifacts and submission contents. Do not delete local
+   databases or other user data without authorization.
+5. Record final commands, results, warning, unresolved limitations and submission readiness.
 
-Phase 7 remains after Phase 6: final README/evidence review, fresh-environment verification,
-known-limitations summary and submission readiness.
+## Known limitations and local state
 
-## Known limitations
-
-- Admin authorization is a shared demo token mapped to one fixed actor, not production
-  authentication or role-based access control. The review queue is protected by this token;
-  audit and explanation reads remain request-ID scoped demo endpoints.
-- SQLite uses `BEGIN IMMEDIATE` and serializes writers; only one retry worker process is
-  supported. Retry/execution leases have no heartbeat.
-- A crash after provider success but before local commit can repeat an external call.
-  Exactly-once external effects are not claimed.
-- Audit stage fields can be null for historical events that did not persist a stage reference.
-- Alembic migration history, a human reviewer UI, and production identity integration remain
-  out of scope.
-- The suite reports one upstream Starlette TestClient/httpx deprecation warning.
-- An ignored `flowguard.db` exists locally with one APPROVED request and three workflow config
-  snapshots. It was inspected read-only after a test-isolation leak was found and fixed; the
-  final suite no longer opens it. Ownership of that row is uncertain, so inspect/backup before
-  any cleanup. Never delete it automatically.
+- Admin authorization is a shared demo token, not production identity or role management.
+  Review queue reads use the token; audit/explanation endpoints are request-ID scoped and
+  unauthenticated in this MVP.
+- SQLite serializes writers; one retry worker is supported. Leases have no heartbeat.
+- A crash after provider success but before local commit can repeat a provider call. Stable
+  operation keys help only if the provider honors idempotency.
+- Historical audit events may not contain a stage field. Schema initialization is additive
+  SQLite logic; Alembic migration history is deferred.
+- One ignored local `flowguard.db` exists with one APPROVED request and three config snapshots.
+  Its ownership is uncertain. The final tests do not access it; inspect/backup before any
+  cleanup and never delete automatically.
+- The suite has one upstream Starlette TestClient/httpx deprecation warning.

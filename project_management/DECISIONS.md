@@ -113,3 +113,16 @@
   input payload. Admin auth is not production user identity or role-based access control.
   Missing server configuration returns 503; missing/invalid credentials return 401/403.
   Token values are not logged or echoed.
+
+## Phase 6 audit conclusions
+
+- The Phase 6 audit found no confirmed business-logic defect requiring runtime changes.
+  Added tests close evidence gaps for missing/wrong/unconfigured admin credentials, review
+  and activation commit rollback, newly discovered inactive config versions, and repeated
+  execution after a final outcome.
+- Existing Phase 3-5 tests already cover invalid input schema, idempotency mismatch/replay,
+  concurrent intake, provider errors/timeouts, retry recovery/exhaustion, worker restart,
+  immutable pins, review conflicts/concurrency, and audit/decision consistency.
+- Confirmed limitation: provider calls remain at-least-once across a crash after external
+  success but before local commit. Leases, stable operation keys and local transactions do
+  not create distributed exactly-once behavior.

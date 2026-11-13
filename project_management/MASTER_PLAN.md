@@ -18,8 +18,8 @@ not require a separate frontend or distributed infrastructure.
    suite has 72 passing tests.
 5. **Audit, manual review, configuration changes** — 45 min. Complete; ordered audit and
    explanation APIs, atomic review resolution, persisted version activation.
-6. **Failure and integration tests, regression fixes** — 50 min. Cover retry, dependency,
-   duplicate, invalid config and rule-change paths.
+6. **Failure and integration tests, regression fixes** — 50 min. Complete; requirement coverage
+   audited and transaction/auth/recovery gaps received deterministic tests.
 7. **README, evidence, verification, submission** — 40 min. Full operator docs, clean setup,
    final verification and known limitations.
 
@@ -36,5 +36,5 @@ and test evidence take precedence over deployment infrastructure and optional fe
 
 ## Current handoff
 
-Phases 1-5 are complete and verified. Phase 6 broad failure/integration/regression coverage
-is next; do not begin until explicitly requested.
+Phases 1-6 are complete and verified. Phase 7 submission readiness is next; do not begin until
+explicitly requested.
