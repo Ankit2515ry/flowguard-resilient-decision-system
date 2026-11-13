@@ -16,9 +16,15 @@
   end-user experience.
 - **Alembic deferred:** avoid migration overhead for the initial schema. If schema evolution
   becomes material, add versioned migrations before production use.
-- **Automatic highest-version selection:** Phase 3 selects the highest valid version at app
-  startup until explicit activation is implemented. This is deterministic and simple, but
-  operators cannot pin a rollback through an activation API yet.
+- **Persisted active-version selection:** A first-time database selects the highest validated
+  version once; later startups preserve the operator's choice. Newly discovered versions are
+  inactive until explicitly selected. This adds a small admin audit table and transaction
+  while keeping old request pins stable.
+- **Shared demo admin token:** one environment-configured credential maps to a fixed actor.
+  This keeps the MVP free of identity-provider dependencies, but does not provide user-level
+  access control or production authentication.
+- **Review queue protected by the same token:** no unauthenticated listing of pending cases;
+  operators must pass the admin credential even for read access.
 - **Exactly-once side effects are not promised:** a crash between dependency success and local
   commit can cause a retry. Stable operation keys help only when the dependency honors them.
 - **Lease recovery has no heartbeat:** execution/retry claims expire after a configured

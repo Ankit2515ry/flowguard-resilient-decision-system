@@ -85,11 +85,30 @@ never pass a session to a provider. Only one retry worker process is supported.
 ## Lifecycle and audit
 
 `RECEIVED -> PROCESSING`; `PROCESSING -> APPROVED | REJECTED | MANUAL_REVIEW | RETRY_WAIT |
-FAILED`; `RETRY_WAIT -> PROCESSING | FAILED`. MANUAL_REVIEW is a holding state in this phase.
+FAILED`; `RETRY_WAIT -> PROCESSING | FAILED`; and an authorized reviewer can transition
+`MANUAL_REVIEW -> APPROVED | REJECTED`.
 Status changes update request and execution together and append the next per-request audit
 sequence in the same transaction. Stage-only movement is recorded as an event with the state
-unchanged. Terminal/holding outcomes create at most one Decision per request; its explanation
-contains pinned config version, rule traces, stage results and external result categories.
+unchanged. A held MANUAL_REVIEW decision is updated in place when resolved so one Decision
+per request remains enforced. Its explanation retains pinned version, traces, stage results
+and external categories.
+
+`GET /requests/{id}/audit` returns only append-only rows in sequence order. Config version is
+read from the request pin; stage comes from persisted event details and may be null for older
+events. Explanation output reads the stored Decision and execution context. It never re-runs
+rules; nonfinal states return `pending: true` and a null final outcome.
+
+Review queue reads and privileged writes use environment-configured `X-Admin-Token`. The demo
+token maps to a fixed actor; clients cannot choose `reviewer_id`. SQLite `BEGIN IMMEDIATE`
+serializes reviewer actions. Same action/reason is an idempotent replay; a different final
+action returns 409. Request/execution status, Decision update and audit append share one
+transaction.
+
+Workflow activation validates the stored snapshot checksum, workflow graph and input schema.
+One transaction switches the active marker and writes an admin audit record; a partial unique
+index enforces one active version. Startup selects highest only for a workflow with no active
+row, while newly discovered versions are inactive. Selection survives restart and existing
+requests keep their pinned version.
 
 ## HTTP mapping
 

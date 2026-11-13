@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,7 @@ from fastapi.responses import JSONResponse
 
 from app.adapters.verification import VerificationProvider, provider_from_environment
 from app.api.requests import router as requests_router
+from app.api.phase5 import router as phase5_router
 from app.api.workflows import router as workflows_router
 from app.core.retry_policy import RetryPolicy
 from app.persistence.database import Database
@@ -37,6 +39,7 @@ def create_app(
     input_schema_dir: str | Path | None = None,
     verification_provider: VerificationProvider | None = None,
     retry_policy: RetryPolicy | None = None,
+    admin_token: str | None = None,
 ) -> FastAPI:
     """Create an app instance; pass a temporary SQLite URL for isolated tests."""
     database = Database(database_url)
@@ -63,8 +66,10 @@ def create_app(
     app.state.config_snapshots = snapshots
     app.state.verification_provider = verification_provider or provider_from_environment()
     app.state.retry_policy = retry_policy or RetryPolicy.from_environment()
+    app.state.admin_token = admin_token if admin_token is not None else os.getenv("FLOWGUARD_ADMIN_TOKEN")
     app.include_router(requests_router)
     app.include_router(workflows_router)
+    app.include_router(phase5_router)
 
     @app.exception_handler(RequestValidationError)
     async def request_validation_error(_request: Request, exc: RequestValidationError):

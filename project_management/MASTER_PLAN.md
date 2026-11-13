@@ -16,8 +16,8 @@ not require a separate frontend or distributed infrastructure.
 4. **Workflow orchestration and retries** — 65 min. Legal state transitions, stage execution,
    deterministic dependency simulator, persisted bounded retry worker. Complete; regression
    suite has 72 passing tests.
-5. **Audit, manual review, configuration changes** — 45 min. Atomic state/audit writes,
-   decision explanations, review API and activation/version behavior.
+5. **Audit, manual review, configuration changes** — 45 min. Complete; ordered audit and
+   explanation APIs, atomic review resolution, persisted version activation.
 6. **Failure and integration tests, regression fixes** — 50 min. Cover retry, dependency,
    duplicate, invalid config and rule-change paths.
 7. **README, evidence, verification, submission** — 40 min. Full operator docs, clean setup,
@@ -36,6 +36,5 @@ and test evidence take precedence over deployment infrastructure and optional fe
 
 ## Current handoff
 
-Phases 1-4 are complete. Phase 5 audit/explanation reads, manual review resolution, and
-configuration activation is next but has not started; proceed only after explicit user
-instruction.
+Phases 1-5 are complete and verified. Phase 6 broad failure/integration/regression coverage
+is next; do not begin until explicitly requested.

@@ -24,13 +24,13 @@
 - [x] Add deterministic configuration/rule tests and preserve the health test.
 - [x] Run the complete test suite and record results.
 
-## Phase 3 - next (not started)
+## Phase 3 - persistence and request intake
 
 - [x] Add SQLAlchemy 2 models for requests, executions, audit events, decisions, retry jobs,
   and workflow config snapshots.
 - [x] Add SQLite session lifecycle, foreign-key enforcement and UTC timestamp handling.
-- [x] Persist validated versioned config snapshots/checksums; select the highest configured
-  version deterministically until explicit activation exists.
+- [x] Persist validated versioned config snapshots/checksums with deterministic first-start
+  selection and later explicit activation.
 - [x] Add version-specific structural input schemas.
 - [x] Implement atomic request/execution/initial-audit intake with scoped database
   idempotency and canonical payload hashing.
@@ -56,9 +56,20 @@
   transaction-boundary tests.
 - [x] Run the existing 47-test baseline plus Phase 4 tests and execute demo flows.
 
-## Phase 5 - next (not started)
+## Phase 5 - audit, review and configuration activation
 
-- [ ] Add audit history and explanation read APIs with trace filtering/formatting.
-- [ ] Add review queue and manual review resolution, preserving decision/audit consistency.
-- [ ] Add explicit workflow version activation/rollback without modifying immutable snapshots.
-- [ ] Add tests for audit/explanation API responses, review resolution and config activation.
+- [x] Add ordered persisted audit and stored-decision explanation read APIs.
+- [x] Add admin-protected review queue and atomic, replay-safe manual review resolution.
+- [x] Add persisted workflow version activation and preserve active selection across restarts.
+- [x] Preserve immutable request pins and record administrative activation events.
+- [x] Add deterministic isolated HTTP integration tests for audit, explanation, retries,
+  review authorization/replay/conflict/concurrency, activation, restart and version pinning.
+- [x] Update operator/API docs, examples and project memory.
+- [x] Run the full suite, compile check and whitespace check; see `TEST_RESULTS.md`.
+
+## Phase 6 - failure and regression coverage (not started)
+
+- [ ] Expand broad failure/integration/regression coverage for malformed configs, provider
+  failures, duplicate requests, retry recovery, invalid lifecycle state and config changes.
+- [ ] Fix defects evidenced by those failure tests; preserve Phase 1-5 contracts.
+- [ ] Record exact verification and unresolved defects before Phase 7.

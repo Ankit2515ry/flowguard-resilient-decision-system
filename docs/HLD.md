@@ -10,6 +10,7 @@ sequenceDiagram
   participant R as SQLite Repositories
   participant E as Rule/Workflow Engine
   participant X as Dependency Adapter
+  participant Admin as Review/Admin API
   C->>A: POST request + Idempotency-Key
   A->>S: validated command
   S->>R: resolve idempotency + pin active config
@@ -21,12 +22,18 @@ sequenceDiagram
   S->>R: persist transition, audit, decision/retry atomically
   S-->>A: request status and decision
   A-->>C: response
+  Admin->>R: atomic review or config activation
 ```
 
 Phase 4 implements explicit execution from the persisted `RECEIVED` state. Each rule/stage
 transition commits its execution/request state and audit event before the next stage. Provider
 calls are outside DB transactions. Retryable provider errors persist a due job and return the
 request as `RETRY_WAIT` until the worker claims it.
+
+Phase 5 adds ordered audit and persisted explanation reads, admin-protected manual review,
+and database-backed version activation. Review state, decision and audit commit atomically.
+Activation writes an admin audit record and changes only the active marker; requests continue
+to use their pinned snapshot.
 
 ## Data records (planned)
 
@@ -47,15 +54,16 @@ state machine explicitly defines allowed edges; API handlers do not mutate state
 admin activation, review queue/resolve, retry processing, and `GET /health`. FastAPI Swagger
 UI is the initial operator/client interface.
 
-Phase 4 provides request creation/status, explicit execution trigger, workflow/version reads,
-and health. Intake contracts remain 202 for new requests and 200 for equivalent replay. The
+Phase 5 also provides audit/explanation reads, review listing/resolution and version activation.
+The intake contracts remain 202 for new requests and 200 for equivalent replay. The
 execute endpoint returns current persisted state; repeated triggers do not duplicate decisions
 or external effects while a claim is live or after completion.
 
 ## Implemented lifecycle
 
 `RECEIVED -> PROCESSING`; `PROCESSING -> APPROVED | REJECTED | MANUAL_REVIEW | RETRY_WAIT |
-FAILED`; `RETRY_WAIT -> PROCESSING | FAILED`. MANUAL_REVIEW is held for Phase 5 resolution.
+FAILED`; `RETRY_WAIT -> PROCESSING | FAILED`; authorized review allows
+`MANUAL_REVIEW -> APPROVED | REJECTED`.
 Request and execution rows share one canonical status. State and audit sequence changes commit
 atomically. Intermediate stage movements are audited with `PROCESSING` as both old and new
 state.

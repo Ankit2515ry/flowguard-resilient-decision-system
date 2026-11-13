@@ -66,3 +66,27 @@
 - Warning: upstream Starlette TestClient reports the existing httpx deprecation.
 - Phase 5 remains deferred: audit/explanation read endpoints, review resolution, and explicit
   config activation are not implemented.
+
+## Phase 5 audit, review and activation
+
+- Final full regression command: `.venv\Scripts\python.exe -m pytest -q`
+- Result: **85 passed, 1 warning** (72 prior tests plus 13 Phase 5 integration tests).
+- Compile command: `.venv\Scripts\python.exe -m compileall -q app` — passed.
+- Whitespace command: `git diff --check` — passed; Git printed LF-to-CRLF normalization
+  notices for changed files, with no whitespace errors.
+- `tests/integration/test_phase5_api.py` uses a unique temporary file-backed SQLite DB per
+  test and a test-only admin credential. Coverage includes ordered approval audit, rule and
+  external events, retry schedule/processing/recovery, unknown request 404, approved/rejected/
+  pending/retry explanations, review approve/reject, auth, idempotent replay, conflicts,
+  concurrent opposing reviewers, loan v1/v2 activation with score 710, request pin retention,
+  restart persistence, invalid version and snapshot corruption, activation idempotency, and
+  admin event actor/version records.
+- A real in-process HTTP integration flow verifies loan v1 score 710 -> APPROVED, loan v2
+  score 710 -> MANUAL_REVIEW, and the original request remains pinned to v1.
+- Warning remains the upstream Starlette TestClient/httpx deprecation warning.
+- The first Phase 5 full-suite attempt exposed that the health test still used the module-level
+  app and opened the default `flowguard.db`. `tests/integration/test_health.py` now creates an
+  in-memory app. The final full-suite rerun passed and did not change the database timestamp.
+  Read-only inspection found one APPROVED request and three config snapshots in the ignored
+  local file; ownership is uncertain, so it was left untouched rather than deleted.
+- Phase 6 broad failure/regression scope remains not started.

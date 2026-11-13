@@ -72,6 +72,11 @@ def validate_input(data: Any, schema: dict[str, Any]) -> None:
     _validate_value(data, schema, "data")
 
 
+def validate_schema_definition(schema: Any) -> None:
+    """Validate a persisted schema definition before it is selected for new intake."""
+    _validate_schema(schema, "$schema")
+
+
 def _validate_value(value: Any, schema: dict[str, Any], location: str) -> None:
     kind = schema["type"]
     matches = {

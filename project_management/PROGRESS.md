@@ -2,10 +2,10 @@
 
 ## Current status
 
-Phases 1-4 are complete and verified. FlowGuard accepts idempotent requests, executes
-explicitly triggered pinned workflows, records transitions/traces/decisions, and resumes
-persisted retries with a one-shot worker. Audit history and manual review/config activation
-APIs remain Phase 5 work.
+Phases 1-5 are complete and verified. FlowGuard accepts idempotent requests, executes
+explicitly triggered pinned workflows, exposes persisted audit/explanation, resolves manual
+review atomically, persists admin version activation, and resumes bounded retries with a
+one-shot worker.
 
 ## Phase 1 evidence
 
@@ -25,15 +25,16 @@ APIs remain Phase 5 work.
   initialized with additive startup upgrades and UTC-aware timestamps.
 - Request/execution/audit intake is atomic; idempotency, status, workflow and version APIs
   are implemented. Each request has a composite FK to its pinned config snapshot.
-- Highest configured version remains the deterministic active version until Phase 5.
+- First-time database initialization selects highest configured version; later activation is
+  persisted and preserved across application restarts.
 
 ## Phase 4 evidence
 
 - Added explicit `POST /api/v1/requests/{id}/execute`; intake still returns 202, idempotent
   replay 200, and conflicting replay 409.
 - Executor verifies and loads the pinned immutable config, evaluates configured rule stages,
-  resolves transitions from YAML, handles external/human/terminal stages, and holds
-  MANUAL_REVIEW for Phase 5.
+  resolves transitions from YAML, handles external/human/terminal stages, and persists
+  MANUAL_REVIEW for authorized Phase 5 resolution.
 - Request and execution use a single legal lifecycle state; each state/stage change is
   transactionally audited. Rule traces, provider outcomes, and one decision are persisted.
 - Added typed deterministic simulator scenarios (`SUCCESS`, `TEMPORARY_FAILURE`,
@@ -47,7 +48,26 @@ APIs remain Phase 5 work.
 - Documented API exercise: happy loan `RECEIVED -> APPROVED`; transient retry
   `RETRY_WAIT -> APPROVED`. Retry worker CLI is also exercised in a subprocess integration test.
 
+## Phase 5 evidence
+
+- Added ordered persisted audit retrieval and deterministic explanation reads from stored
+  traces/results. Nonfinal requests are explicitly pending; no rules are re-evaluated.
+- Added admin-token-protected review queue and resolution. A fixed `demo-admin` actor is
+  derived from the server credential. Review action/reason, status, unique Decision update
+  and audit event commit atomically; identical resolution is replay-safe.
+- Added persisted configuration activation and administrative audit rows. First initialization
+  defaults to highest validated version, later starts preserve active selection, and newly
+  discovered versions remain inactive. Old requests remain pinned.
+- Added a 710 credit-score integration demonstration: loan v1 is approved; loan v2 enters
+  MANUAL_REVIEW; v1 request remains pinned after the switch.
+- Phase 5 tests: **85 passed, 1 warning**; compile and whitespace checks passed (see
+  `TEST_RESULTS.md`).
+- The health smoke test now uses in-memory SQLite; the final suite does not open the local
+  `flowguard.db`. That ignored file contains one existing APPROVED request and was left intact
+  because its ownership is uncertain.
+
 ## Next
 
-Phase 5 is next, only when requested: audit/explanation APIs, review queue/resolution, and
-explicit workflow configuration activation. See `TASKS.md` and `HANDOFF.md`.
+Phase 6 is next, only when requested: broaden failure and regression coverage, fix defects
+found, then prepare final verification/submission work in Phase 7. See `TASKS.md` and
+`HANDOFF.md`.

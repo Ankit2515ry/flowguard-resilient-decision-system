@@ -11,7 +11,7 @@ LEGAL_TRANSITIONS: dict[str, frozenset[str]] = {
     "RETRY_WAIT": frozenset({"PROCESSING", "FAILED", "MANUAL_REVIEW"}),
     "APPROVED": frozenset(),
     "REJECTED": frozenset(),
-    "MANUAL_REVIEW": frozenset(),
+    "MANUAL_REVIEW": frozenset({"APPROVED", "REJECTED"}),
     "FAILED": frozenset(),
 }
 

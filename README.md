@@ -1,9 +1,10 @@
 # FlowGuard
 
-FlowGuard is a configurable workflow decision platform. Phases 1-4 provide FastAPI, a
+FlowGuard is a configurable workflow decision platform. Phases 1-5 provide FastAPI, a
 versioned YAML rule engine, SQLite-backed idempotent intake, explicit workflow execution,
-audit events, decision explanations, an external verification simulator, and persisted
-bounded retries. Requests are accepted first and execute only when explicitly triggered.
+audit and explanation APIs, manual review, explicit workflow version activation, an external
+verification simulator, and persisted bounded retries. Requests are accepted first and
+execute only when explicitly triggered.
 
 ## Requirements and installation
 
@@ -30,6 +31,7 @@ Choose a database explicitly in PowerShell:
 
 ```powershell
 $env:FLOWGUARD_DATABASE_URL = "sqlite:///./flowguard.db"
+$env:FLOWGUARD_ADMIN_TOKEN = "local-demo-token-change-me"
 .venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
@@ -111,32 +113,81 @@ failure schedules another attempt only while the total remains below that limit.
 `min(max_delay, base_delay * 2^(failed_attempt - 1))`. Defaults are 3 total attempts, 1 second
 base delay, 60 second cap, and a 120 second execution/retry lease.
 
-## Inspect explanations and audit events
+## Inspect explanations and audit history
 
-The request status response includes `decision.explanation.rule_traces` after a decision:
-
-```powershell
-$status = Invoke-RestMethod "http://127.0.0.1:8000$($created.status_url)"
-$status.decision.explanation.rule_traces | ConvertTo-Json -Depth 8
-```
-
-Audit events are stored in ordered `audit_events` rows. Inspect them for a request ID with
-the project ORM (using the same `FLOWGUARD_DATABASE_URL`):
+Use the persisted read APIs:
 
 ```powershell
-$env:FLOWGUARD_REQUEST_ID = $created.request_id
-.venv\Scripts\python.exe -c "import os; from sqlalchemy import select; from app.persistence.database import Database; from app.persistence.models import AuditEvent; db=Database(); s=db.session_factory(); rows=s.scalars(select(AuditEvent).where(AuditEvent.request_id == os.environ['FLOWGUARD_REQUEST_ID']).order_by(AuditEvent.sequence)).all(); print([(e.sequence, e.event_type, e.old_state, e.new_state, e.details) for e in rows]); s.close(); db.dispose()"
+$requestId = $created.request_id
+Invoke-RestMethod "http://127.0.0.1:8000/api/v1/requests/$requestId/explanation" |
+  ConvertTo-Json -Depth 10
+Invoke-RestMethod "http://127.0.0.1:8000/api/v1/requests/$requestId/audit" |
+  ConvertTo-Json -Depth 10
 ```
 
-API errors use `{ "error": { "code": "...", "message": "..." } }`; request validation
-errors include field details. Workflow and schema versions are listed by
-`GET /api/v1/workflows` and `GET /api/v1/workflows/{workflow_id}/versions`.
+Nonfinal states report `pending: true` and no final decision outcome. Explanations reuse
+stored rule traces, stage results and provider attempts; rules are never re-evaluated under a
+newer version. Audit responses contain only persisted events, ordered by per-request sequence.
+Older events may have no stage field when that event did not record one.
 
-## Configuration and version selection
+## Manual review and admin authentication
+
+Set the server-side `FLOWGUARD_ADMIN_TOKEN` before starting the API. Review queue reads and
+privileged writes use `X-Admin-Token`. A valid token maps to fixed actor `demo-admin`; the
+client cannot submit a reviewer identity. Do not commit a real credential. Example:
+
+```powershell
+$headers = @{ "X-Admin-Token" = $env:FLOWGUARD_ADMIN_TOKEN }
+$queue = Invoke-RestMethod "http://127.0.0.1:8000/api/v1/reviews" -Headers $headers
+$reviewId = $queue[0].request_id
+Invoke-RestMethod -Method Post `
+  -Uri "http://127.0.0.1:8000/api/v1/reviews/$reviewId/resolve" `
+  -Headers $headers -ContentType "application/json" `
+  -Body (@{ action = "APPROVE"; reason = "Documents checked" } | ConvertTo-Json)
+```
+
+Only pending `MANUAL_REVIEW` requests can be resolved. The action, reason, status, decision
+and audit event commit together. Repeating the same action and reason is safe; a conflicting
+resolution after finalization returns 409. Missing and incorrect tokens return 401 and 403.
+If no token is configured, protected endpoints return 503. This shared demo credential is not
+production identity management.
+
+## Activate workflow versions
+
+Activation persists in SQLite. A first-time database selects the highest validated version
+once; later startup preserves its active selection and registers newly discovered versions as
+inactive. Existing request pins and snapshots do not change. Score 710 passes loan v1's 700
+threshold and is sent to review under v2's 720 threshold:
+
+```powershell
+$headers = @{ "X-Admin-Token" = $env:FLOWGUARD_ADMIN_TOKEN }
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/api/v1/admin/workflows/activate" `
+  -Headers $headers -ContentType "application/json" `
+  -Body (@{ workflow_id = "loan_approval"; version = 1 } | ConvertTo-Json)
+
+$body = @{ workflow_id = "loan_approval"; data = @{ applicant = @{
+  age = 24; monthly_income = 60000; credit_score = 710
+} } } | ConvertTo-Json -Depth 8
+$first = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/api/v1/requests" `
+  -Headers @{ "Idempotency-Key" = "version-demo-v1" } -ContentType "application/json" -Body $body
+$firstResult = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000$($first.status_url)/execute"
+
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/api/v1/admin/workflows/activate" `
+  -Headers $headers -ContentType "application/json" `
+  -Body (@{ workflow_id = "loan_approval"; version = 2 } | ConvertTo-Json)
+$second = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/api/v1/requests" `
+  -Headers @{ "Idempotency-Key" = "version-demo-v2" } -ContentType "application/json" -Body $body
+$secondResult = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000$($second.status_url)/execute"
+$first.config_version; $firstResult.status; $second.config_version; $secondResult.status
+```
+
+Expected output: `1`, `APPROVED`, `2`, `MANUAL_REVIEW`. The first request remains pinned to
+version 1. `GET /api/v1/workflows/loan_approval/versions` shows active selection. Repeating
+the current activation is idempotent and creates no duplicate admin audit event. Unknown
+resources return 404, invalid bodies return 422, and state conflicts return 409.
 
 Definitions live in `configs/workflows/`; structural input schemas live in
-`configs/input_schemas/`. Startup validates and snapshots each pair with a checksum. The
-highest configured integer version is active until Phase 5 adds explicit activation. Changing
+`configs/input_schemas/`. Startup validates and snapshots each pair with a checksum. Changing
 content under an existing version fails startup. Each accepted request remains pinned to its
 persisted config version.
 
@@ -157,12 +208,12 @@ and worker restart cases; they do not use the developer's default database.
   are not claimed.
 - SQLite serializes writers and limits throughput. The demo adapter is deterministic, not a
   substitute for testing a real identity/vendor provider.
-- Manual review is a holding outcome. Review resolution and explicit config activation are
-  Phase 5 work.
+- SQLite schema creation is additive at startup; Alembic migration history is deferred.
+- Admin authentication is a shared demo credential, not production identity management.
 
 ## Project map
 
-- `app/api/`: request, execution, status and workflow discovery endpoints
+- `app/api/`: request, execution, audit, explanation, review and workflow endpoints
 - `app/engine/`: existing Phase 2 config loader and pure rule engine
 - `app/services/`: intake, snapshots, workflow orchestration and retry processing
 - `app/adapters/`: provider contract and deterministic simulator

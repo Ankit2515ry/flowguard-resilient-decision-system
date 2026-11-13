@@ -1,7 +1,7 @@
 """HTTP request and response schemas for intake and workflow discovery."""
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -51,3 +51,62 @@ class WorkflowVersionView(BaseModel):
     version: int
     checksum: str
     is_active: bool
+
+
+class AuditEventView(BaseModel):
+    sequence: int
+    event_type: str
+    old_state: str | None
+    new_state: str
+    stage: str | None
+    created_at: datetime
+    config_version: int
+    details: dict[str, Any]
+
+
+class DecisionExplanationView(BaseModel):
+    request_id: UUID
+    workflow_id: str
+    config_version: int
+    status: str
+    decision_outcome: str | None
+    pending: bool
+    summary: str
+    rule_traces: list[dict[str, Any]]
+    stage_results: list[dict[str, Any]]
+    external_results: list[dict[str, Any]]
+    review_resolution: dict[str, Any] | None = None
+
+
+class ReviewItemView(BaseModel):
+    request_id: UUID
+    workflow_id: str
+    config_version: int
+    status: str
+    current_stage: str
+    created_at: datetime
+
+
+class ReviewResolutionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    action: Literal["APPROVE", "REJECT"]
+    reason: str = Field(min_length=1, max_length=2000)
+
+
+class ReviewResolutionView(BaseModel):
+    request_id: UUID
+    status: str
+    decision_outcome: str
+    replayed: bool
+
+
+class WorkflowActivationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    workflow_id: str = Field(min_length=1, max_length=120)
+    version: int = Field(ge=1)
+
+
+class WorkflowActivationView(BaseModel):
+    workflow_id: str
+    active_version: int
+    changed: bool

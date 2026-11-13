@@ -54,8 +54,8 @@
   assumes one application process; SQLite write throughput is intentionally limited.
 - Startup snapshots the exact validated workflow model plus a version-specific structural
   input schema and checksum. Existing `(workflow_id, version)` content is immutable; changed
-  content under the same version prevents startup. Until Phase 5, highest numeric version is
-  selected active at startup.
+  content under the same version prevents startup. Initially, highest numeric version is
+  selected active; Phase 5 adds a persistent operator selection.
 - Canonical idempotency hash covers workflow ID and `data`, not active config version. A
   repeated request after a version change therefore returns the original pinned request.
 - Request creation, initial execution (`RECEIVED`) and audit sequence 1 share one transaction.
@@ -73,7 +73,7 @@
   concurrent claims and final outcomes do not create duplicate decisions.
 - Request and execution `status` are canonical and updated in the same transaction. Legal
   edges are RECEIVED->PROCESSING, PROCESSING->APPROVED/REJECTED/MANUAL_REVIEW/RETRY_WAIT/FAILED,
-  and RETRY_WAIT->PROCESSING/FAILED. MANUAL_REVIEW is a holding outcome until Phase 5.
+  RETRY_WAIT->PROCESSING/FAILED, and (Phase 5) authorized MANUAL_REVIEW->APPROVED/REJECTED.
 - Each stage movement and state transition writes an ordered audit event atomically. Rule
   traces and external result categories are kept in execution context and copied into the
   terminal/holding Decision explanation with the pinned config version.
@@ -90,3 +90,26 @@
   exactly-once guarantee.
 - SQLite transactions use `BEGIN IMMEDIATE`; simple additive SQLite upgrades preserve Phase 3
   data while adding execution context and retry claim columns. Alembic remains deferred.
+
+## Phase 5 decisions
+
+- Startup inserts validated newly discovered workflow snapshots as inactive. It initializes
+  the highest version only when no active row exists, then preserves that selection on
+  restart. Intake uses the active row; request pins remain unchanged after activation.
+- Activation verifies the persisted snapshot checksum, workflow graph and input schema, then
+  switches the active row and appends an `AdminAuditEvent` in one transaction. The partial
+  unique index enforces at most one active version per workflow. Re-activating the current
+  version is a no-op without a duplicate admin audit event.
+- Audit reads return actual rows in sequence order. Config version comes from the pinned
+  request; stage can be null when a persisted historical event had no stage reference.
+  Explanations read persisted traces/results and never re-evaluate old decisions.
+- Review queue reads and privileged writes require environment-configured `X-Admin-Token`.
+  The demo token maps to fixed actor `demo-admin`; reviewer identity is never accepted from
+  a client. Review reason/action, request/execution status, held Decision update and
+  `REVIEW_RESOLVED` event commit atomically. Same action/reason is idempotent; conflicts
+  return 409. SQLite `BEGIN IMMEDIATE` serializes competing actions.
+- Review queue reads use the same admin credential because they reveal pending case references.
+  Audit/explanation reads remain request-scoped demo endpoints and never return the whole
+  input payload. Admin auth is not production user identity or role-based access control.
+  Missing server configuration returns 503; missing/invalid credentials return 401/403.
+  Token values are not logged or echoed.

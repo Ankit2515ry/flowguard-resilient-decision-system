@@ -1,51 +1,48 @@
 # Handoff
 
-## State
+## Verified state
 
-Phases 1-4 are complete. Intake remains explicit and idempotent; `POST /api/v1/requests/{id}/execute`
-walks the pinned workflow and persists lifecycle state, audit events, rule traces, decisions,
-and retry jobs. The suite passes: 72 passed, 1 upstream Starlette TestClient/httpx warning.
-See `TEST_RESULTS.md` for exact commands and evidence.
+Phases 1-5 are implemented. Phase 5 adds ordered audit and explanation APIs, admin-token
+protected review listing/resolution, and persistent workflow version activation. The full
+suite currently reports 85 passed, one upstream Starlette TestClient/httpx deprecation
+warning; final commands/results are recorded in `TEST_RESULTS.md`.
 
-## Exact next phase (not started)
+Important contracts: intake remains 202 for new requests and 200 for equivalent replay;
+execution is explicit; every state change is audited atomically; requests retain their pinned
+config version; review updates the existing unique Decision; and only the server-configured
+admin token establishes the fixed `demo-admin` actor. Startup preserves the active version
+after first initialization and registers newly found versions inactive.
 
-Phase 5 only after explicit instruction:
+## Exact next work (Phase 6, not started)
 
-1. Add `GET /api/v1/requests/{id}/audit` with ordered events and stable response schemas.
-2. Add `GET /api/v1/requests/{id}/explanation`, returning persisted decision, pinned config
-   version and rule trace evidence.
-3. Add review queue and `POST /api/v1/reviews/{id}/resolve` with legal MANUAL_REVIEW
-   transitions, atomic decision update and audit append. Preserve one Decision per request;
-   update the held decision or deliberately revise the uniqueness contract before resolution.
-4. Add explicit workflow version activation/rollback; never edit an existing persisted
-   workflow/config snapshot to represent a rule change.
-5. Add temporary-database tests for audit/explanation reads, review outcomes, and activation
-   while verifying that in-flight requests remain pinned.
+Proceed only after an explicit Phase 6 request:
 
-Do not begin Phase 6 broad failure/regression scope until Phase 5 is done and requested.
+1. Expand deterministic failure/regression coverage across malformed and changed config,
+   provider exceptions/permanent failures, retry exhaustion/recovery, duplicate and concurrent
+   intake/execution/review actions, invalid lifecycle transitions, and activation pinning.
+2. Keep each test on an isolated temporary SQLite database; never use the local `flowguard.db`.
+3. Fix only defects demonstrated by tests while preserving Phase 1-5 endpoint and persistence
+   contracts.
+4. Run the full suite and required compile/whitespace checks; record exact outcomes and any
+   unresolved defects in project memory.
 
-## Phase 4 contracts to preserve
+Phase 7 remains after Phase 6: final README/evidence review, fresh-environment verification,
+known-limitations summary and submission readiness.
 
-- POST request intake stays storage-only and returns 202; equivalent idempotent replay stays
-  200; conflicting replay stays 409.
-- Execution is an explicit trigger. Request/execution statuses remain canonical and state
-  changes plus audit events commit atomically.
-- Existing rule engine/config loader remain the source of business rules and transitions.
-  Execution uses the request's exact checksummed pinned snapshot.
-- HUMAN_TASK follows its configured MANUAL_REVIEW transition to a holding state. No review
-  resolution is currently available.
-- `max_attempts` includes the first call. The worker is one-shot and reclaims expired durable
-  leases. Provider calls are outside DB transactions and use stable operation keys.
-- Tests use temporary SQLite databases. Do not run integration tests against `flowguard.db`.
+## Known limitations
 
-## Known limitations / unresolved defects
-
-- No known Phase 4 defects.
-- The simulator is deterministic and server-configured; real provider behavior is not covered.
-- SQLite uses `BEGIN IMMEDIATE`, serializing transactions and limiting throughput.
-- Only one retry worker process is supported. Leases have no heartbeat; calls exceeding the
-  lease can be repeated. A crash after provider success but before local commit can repeat a
-  call, so exactly-once external effects are not claimed.
-- Audit/explanation REST endpoints, manual review resolution, explicit config activation,
-  human review UI, and production Alembic migrations remain Phase 5 or later.
-- The test run still reports the upstream Starlette TestClient/httpx deprecation warning.
+- Admin authorization is a shared demo token mapped to one fixed actor, not production
+  authentication or role-based access control. The review queue is protected by this token;
+  audit and explanation reads remain request-ID scoped demo endpoints.
+- SQLite uses `BEGIN IMMEDIATE` and serializes writers; only one retry worker process is
+  supported. Retry/execution leases have no heartbeat.
+- A crash after provider success but before local commit can repeat an external call.
+  Exactly-once external effects are not claimed.
+- Audit stage fields can be null for historical events that did not persist a stage reference.
+- Alembic migration history, a human reviewer UI, and production identity integration remain
+  out of scope.
+- The suite reports one upstream Starlette TestClient/httpx deprecation warning.
+- An ignored `flowguard.db` exists locally with one APPROVED request and three workflow config
+  snapshots. It was inspected read-only after a test-isolation leak was found and fixed; the
+  final suite no longer opens it. Ownership of that row is uncertain, so inspect/backup before
+  any cleanup. Never delete it automatically.

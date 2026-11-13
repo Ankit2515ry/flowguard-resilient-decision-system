@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.persistence.models import AuditEvent, Decision, WorkflowConfig, WorkflowExecution, WorkflowRequest
@@ -53,10 +53,11 @@ def synchronize_workflow_snapshots(
     session: Session,
     snapshots: Iterable[dict[str, Any]],
 ) -> None:
-    """Insert immutable snapshots and activate each workflow's highest version.
+    """Insert immutable snapshots; select highest only for first-time workflows.
 
-    A stored version whose bytes/checksum changes is a startup error. Activation only flips
-    the active marker; request rows continue to pin the old version number.
+    Once a workflow has an active row, startup never changes that operator selection.
+    Newly discovered versions are persisted inactive. A stored version whose checksum
+    changes is a startup error.
     """
     snapshot_list = list(snapshots)
     grouped: dict[str, list[dict[str, Any]]] = {}
@@ -75,11 +76,14 @@ def synchronize_workflow_snapshots(
                 f"immutable workflow snapshot changed for {key[0]} version {key[1]}"
             )
 
-    # Clear before setting a new active version to satisfy the partial unique index.
-    session.execute(update(WorkflowConfig).values(is_active=False))
     session.flush()
     for workflow_id, versions in grouped.items():
-        latest = max(versions, key=lambda item: item["version"])
-        active_row = session.get(WorkflowConfig, (workflow_id, latest["version"]))
-        assert active_row is not None
-        active_row.is_active = True
+        current_active = session.scalar(select(WorkflowConfig).where(
+            WorkflowConfig.workflow_id == workflow_id,
+            WorkflowConfig.is_active.is_(True),
+        ))
+        if current_active is None:
+            latest = max(versions, key=lambda item: item["version"])
+            active_row = session.get(WorkflowConfig, (workflow_id, latest["version"]))
+            assert active_row is not None
+            active_row.is_active = True

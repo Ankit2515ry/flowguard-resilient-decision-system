@@ -152,3 +152,17 @@ class WorkflowConfig(Base):
     configuration: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     checksum: Mapped[str] = mapped_column(String(64), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class AdminAuditEvent(Base):
+    """Append-only record of privileged configuration changes."""
+
+    __tablename__ = "admin_audit_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    event_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    workflow_id: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    actor: Mapped[str] = mapped_column(String(120), nullable=False)
+    old_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    new_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False, default=utc_now)
