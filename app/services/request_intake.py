@@ -125,12 +125,17 @@ def create_request(
         return existing, True
 
 
-def get_request_status(session: Session, request_id: str) -> tuple[WorkflowRequest, Decision | None] | None:
+def get_request_status(
+    session: Session, request_id: str
+) -> tuple[WorkflowRequest, Decision | None, WorkflowExecution | None] | None:
     request = RequestRepository(session).by_id(request_id)
     if request is None:
         return None
     decision = RequestRepository(session).decision_for(request_id)
-    return request, decision
+    execution = session.scalar(select(WorkflowExecution).where(
+        WorkflowExecution.request_id == request_id
+    ))
+    return request, decision, execution
 
 
 def get_execution(session: Session, request_id: str) -> WorkflowExecution | None:

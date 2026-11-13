@@ -14,7 +14,8 @@ not require a separate frontend or distributed infrastructure.
 3. **Database, intake API, idempotency** — 70 min. Persistence models and atomic uniqueness;
    canonical payload hash and conflict behavior. Complete; Phase 3 evidence in `TEST_RESULTS.md`.
 4. **Workflow orchestration and retries** — 65 min. Legal state transitions, stage execution,
-   deterministic dependency simulator, persisted bounded retry worker.
+   deterministic dependency simulator, persisted bounded retry worker. Complete; regression
+   suite has 72 passing tests.
 5. **Audit, manual review, configuration changes** — 45 min. Atomic state/audit writes,
    decision explanations, review API and activation/version behavior.
 6. **Failure and integration tests, regression fixes** — 50 min. Cover retry, dependency,
@@ -35,5 +36,6 @@ and test evidence take precedence over deployment infrastructure and optional fe
 
 ## Current handoff
 
-Phases 1-3 are complete. Phase 4 workflow orchestration and retry handling is next but has not
-started; proceed only after explicit user instruction.
+Phases 1-4 are complete. Phase 5 audit/explanation reads, manual review resolution, and
+configuration activation is next but has not started; proceed only after explicit user
+instruction.

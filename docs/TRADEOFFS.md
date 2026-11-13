@@ -4,7 +4,8 @@
   deadline. Phase 3 uses `BEGIN IMMEDIATE` to make scoped idempotency races deterministic;
   writers are serialized, so throughput and horizontal scaling are limited.
 - **Synchronous FastAPI plus persisted retry worker:** fewer moving parts than a queue stack.
-  The MVP assumes one worker; throughput and distributed job claiming are limited.
+  The MVP assumes one retry worker; durable leases recover expired work, but throughput and
+  distributed claiming remain limited.
 - **Declarative YAML:** workflow edits are reviewable and versionable. It requires strict
   validation and does not provide arbitrary user code, by design.
 - **Immutable config versions:** history and in-flight behavior are reproducible, at the cost
@@ -20,3 +21,8 @@
   operators cannot pin a rollback through an activation API yet.
 - **Exactly-once side effects are not promised:** a crash between dependency success and local
   commit can cause a retry. Stable operation keys help only when the dependency honors them.
+- **Lease recovery has no heartbeat:** execution/retry claims expire after a configured
+  interval. Provider calls must normally finish before that interval; a longer call can be
+  repeated after lease expiry, using the same stable operation key.
+- **Max attempts include attempt one:** the first external call consumes one configured
+  attempt, making the number of scheduled retries `max_attempts - 1` at most.

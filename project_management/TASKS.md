@@ -39,10 +39,26 @@
   controlled file-backed concurrent duplicate submissions.
 - [x] Run full regression suite and final health/import checks.
 
-## Phase 4 - next (not started)
+## Phase 4 - orchestration and retries
 
-- [ ] Implement legal workflow state transitions and stage orchestration.
-- [ ] Execute configured rule evaluation stages using the existing pure rule engine.
-- [ ] Add deterministic external dependency simulator and stable operation keys.
-- [ ] Persist bounded retry jobs and provide a retry processing command or endpoint.
-- [ ] Add integration/failure tests for execution, dependency failures and retries.
+- [x] Implement canonical request/execution states and legal transition validation.
+- [x] Add explicit repeat-safe execution trigger; preserve POST intake behavior.
+- [x] Execute pinned YAML rule, external, human-task and terminal stages without hardcoding
+  business eligibility rules.
+- [x] Persist traces, stage results, decisions and ordered audit events transactionally.
+- [x] Add typed provider contract and deterministic success/temporary/recovery/permanent
+  simulator scenarios configured server-side.
+- [x] Add stable external operation keys and bounded persisted retries with exponential
+  backoff; first provider attempt counts toward max_attempts.
+- [x] Add durable execution/retry leases and expired-claim recovery.
+- [x] Add one-shot retry CLI and additive Phase 4 SQLite schema upgrade.
+- [x] Add deterministic execution, rollback, concurrency, worker restart, and provider
+  transaction-boundary tests.
+- [x] Run the existing 47-test baseline plus Phase 4 tests and execute demo flows.
+
+## Phase 5 - next (not started)
+
+- [ ] Add audit history and explanation read APIs with trace filtering/formatting.
+- [ ] Add review queue and manual review resolution, preserving decision/audit consistency.
+- [ ] Add explicit workflow version activation/rollback without modifying immutable snapshots.
+- [ ] Add tests for audit/explanation API responses, review resolution and config activation.

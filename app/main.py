@@ -11,8 +11,10 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from app.adapters.verification import VerificationProvider, provider_from_environment
 from app.api.requests import router as requests_router
 from app.api.workflows import router as workflows_router
+from app.core.retry_policy import RetryPolicy
 from app.persistence.database import Database
 from app.persistence.repositories import synchronize_workflow_snapshots
 from app.services.configuration_snapshots import build_config_snapshots
@@ -33,6 +35,8 @@ def create_app(
     database_url: str | None = None,
     workflow_config_dir: str | Path | None = None,
     input_schema_dir: str | Path | None = None,
+    verification_provider: VerificationProvider | None = None,
+    retry_policy: RetryPolicy | None = None,
 ) -> FastAPI:
     """Create an app instance; pass a temporary SQLite URL for isolated tests."""
     database = Database(database_url)
@@ -57,6 +61,8 @@ def create_app(
     )
     app.state.database = database
     app.state.config_snapshots = snapshots
+    app.state.verification_provider = verification_provider or provider_from_environment()
+    app.state.retry_policy = retry_policy or RetryPolicy.from_environment()
     app.include_router(requests_router)
     app.include_router(workflows_router)
 

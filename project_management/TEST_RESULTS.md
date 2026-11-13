@@ -43,3 +43,26 @@
 - Warning remains the upstream Starlette TestClient/httpx deprecation.
 - Deferred: workflow stage execution, decision creation, audit/status history endpoints,
   activation API, retries and external dependency calls.
+
+## Phase 4 workflow execution and retries
+
+- Final regression command: `.venv\Scripts\python.exe -m pytest -q`
+- Result: **72 passed, 1 warning** (47 baseline tests plus 25 Phase 4 tests).
+- Additional checks: `.venv\Scripts\python.exe -m compileall -q app tests` — passed;
+  `git diff --check` — passed.
+- Health import/smoke: in-memory SQLite `create_app` + FastAPI TestClient returned HTTP 200
+  and `{"status":"ok"}`.
+- Demo HTTP flows: loan request `RECEIVED -> APPROVED`; simulated transient failure
+  `RETRY_WAIT -> APPROVED` after one due retry. These were exercised with temporary
+  in-memory SQLite databases and a controlled due time, without sleeping.
+- Worker CLI was run from an integration test as
+  `.venv\Scripts\python.exe -m app.workers.retry_worker --once` against a temporary file DB;
+  it processed one persisted due job and completed the request as APPROVED in a new process.
+- Coverage includes rule rejection/manual review, vendor approval, pinned loan v1/v2 behavior,
+  immediate/permanent/transient provider outcomes, recovery/exhaustion, stable operation keys,
+  duplicate execution, concurrent execution trigger, status/audit/trace consistency, external
+  call transaction boundary, commit rollback, restart/expired-lease recovery, additive SQLite
+  upgrade, missing request, invalid stage/transition, and max-attempt/backoff semantics.
+- Warning: upstream Starlette TestClient reports the existing httpx deprecation.
+- Phase 5 remains deferred: audit/explanation read endpoints, review resolution, and explicit
+  config activation are not implemented.

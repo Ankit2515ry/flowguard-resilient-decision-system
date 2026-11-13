@@ -4,11 +4,20 @@ from __future__ import annotations
 
 import hashlib
 import json
+import hashlib
 from pathlib import Path
 from typing import Any
 
 from app.engine.config import WorkflowDefinition, load_workflows
 from app.services.input_validation import load_input_schema
+
+
+def configuration_checksum(configuration: dict[str, Any]) -> str:
+    canonical = json.dumps(
+        configuration, sort_keys=True, separators=(",", ":"),
+        ensure_ascii=False, allow_nan=False,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def build_config_snapshots(
@@ -30,14 +39,10 @@ def build_config_snapshots(
             "workflow": definition.model_dump(mode="json"),
             "input_schema": input_schema,
         }
-        canonical = json.dumps(
-            configuration, sort_keys=True, separators=(",", ":"),
-            ensure_ascii=False, allow_nan=False,
-        )
         snapshots.append({
             "workflow_id": workflow_id,
             "version": version,
             "configuration": configuration,
-            "checksum": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+            "checksum": configuration_checksum(configuration),
         })
     return snapshots

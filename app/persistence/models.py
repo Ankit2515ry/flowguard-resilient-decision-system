@@ -77,6 +77,9 @@ class WorkflowExecution(Base):
     current_stage: Mapped[str] = mapped_column(String(120), nullable=False)
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="RECEIVED")
     revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    context: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    lease_token: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    lease_until: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False, default=utc_now, onupdate=utc_now)
 
@@ -113,15 +116,23 @@ class Decision(Base):
 
 class RetryJob(Base):
     __tablename__ = "retry_jobs"
+    __table_args__ = (
+        UniqueConstraint("execution_id", "stage_id", name="uq_retry_execution_stage"),
+        UniqueConstraint("operation_key", name="uq_retry_operation_key"),
+        Index("ix_retry_due", "status", "next_run_at"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     execution_id: Mapped[str] = mapped_column(
         ForeignKey("workflow_executions.id", ondelete="CASCADE"), nullable=False, index=True
     )
     stage_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    operation_key: Mapped[str] = mapped_column(String(255), nullable=False)
     attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     next_run_at: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="PENDING")
+    claim_token: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    lease_until: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False, default=utc_now)
 
 

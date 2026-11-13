@@ -65,3 +65,28 @@
   snapshot, enforcing version pin integrity at the database boundary.
 - Input shape/type requirements live in per-version `configs/input_schemas` YAML sidecars;
   eligibility thresholds remain only in the workflow rule configuration.
+
+## Phase 4 choices
+
+- Intake remains storage-only. Execution is an explicit `POST /api/v1/requests/{id}/execute`
+  trigger. Repeated calls return the current state; the database lease/state check prevents
+  concurrent claims and final outcomes do not create duplicate decisions.
+- Request and execution `status` are canonical and updated in the same transaction. Legal
+  edges are RECEIVED->PROCESSING, PROCESSING->APPROVED/REJECTED/MANUAL_REVIEW/RETRY_WAIT/FAILED,
+  and RETRY_WAIT->PROCESSING/FAILED. MANUAL_REVIEW is a holding outcome until Phase 5.
+- Each stage movement and state transition writes an ordered audit event atomically. Rule
+  traces and external result categories are kept in execution context and copied into the
+  terminal/holding Decision explanation with the pinned config version.
+- Provider behavior is behind a typed adapter interface. The deterministic simulator reads
+  only server configuration, not request fields. Unexpected provider exceptions are
+  retryable technical failures and follow bounded retry/fallback behavior.
+- `max_attempts` counts the initial external call. Delay after failed attempt n is
+  `min(max_delay, base_delay * 2^(n-1))`. Defaults and lease duration are environment-configurable.
+- External calls happen with no SQLAlchemy session/transaction open. A stable operation key
+  is derived from workflow/version/request/stage/operation. Retrying after a crash can repeat
+  the call; provider-side idempotency is required for side-effect deduplication.
+- Retry jobs and execution claims have durable expiry leases. One retry worker process is
+  supported. The one-shot worker reclaims expired claims; there is no heartbeat or distributed
+  exactly-once guarantee.
+- SQLite transactions use `BEGIN IMMEDIATE`; simple additive SQLite upgrades preserve Phase 3
+  data while adding execution context and retry claim columns. Alembic remains deferred.

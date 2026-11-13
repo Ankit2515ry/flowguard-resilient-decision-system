@@ -56,6 +56,27 @@ version is active per workflow until explicit activation is implemented. Replaci
 under an existing version/checksum fails startup. A request stores the selected version and
 does not trigger stage execution in Phase 3.
 
+## Phase 4 execution and retry
+
+Execution is explicitly triggered by `POST /api/v1/requests/{id}/execute`; intake remains
+unchanged. The executor loads and checksum-verifies the exact persisted config snapshot,
+walks the validated stage graph, uses the Phase 2 pure rule engine, and resolves each outcome
+through that config's transition table. HUMAN_TASK routes to the configured manual-review
+terminal and holds. Terminal stages persist one Decision containing versioned rule traces.
+
+Request and execution status are updated together through the lifecycle transition table, with
+one ordered AuditEvent in the same short transaction. Stage movement while PROCESSING is also
+audited. A lease token prevents concurrent execute triggers from claiming one execution; an
+expired initial-execution lease can be recovered. External calls receive a stable operation
+key and run after the claim transaction closes. A retryable error atomically stores a RetryJob
+and transitions to RETRY_WAIT. A one-shot worker claims due/expired jobs with a durable lease,
+then calls the provider outside the transaction. Permanent failures and exhausted retries
+take the configured EXTERNAL_CALL `FAILURE` transition.
+
+The max-attempts setting includes the first provider call. Delay grows exponentially and is
+capped. The simulator reads server-side environment configuration; request data cannot select
+a failure mode. The MVP is a single-worker design without exactly-once provider guarantees.
+
 ## Configuration lifecycle
 
 Load YAML into typed models, validate local expressions and graph-wide references, then

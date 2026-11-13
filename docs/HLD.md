@@ -23,10 +23,10 @@ sequenceDiagram
   A-->>C: response
 ```
 
-The complete sequence is the intended platform. Phase 3 currently implements the intake
-through persistence and returns at `RECEIVED`; evaluation and external stages are not run.
-Later implementation may split stage execution into multiple short transactions around
-external calls.
+Phase 4 implements explicit execution from the persisted `RECEIVED` state. Each rule/stage
+transition commits its execution/request state and audit event before the next stage. Provider
+calls are outside DB transactions. Retryable provider errors persist a due job and return the
+request as `RETRY_WAIT` until the worker claims it.
 
 ## Data records (planned)
 
@@ -47,15 +47,23 @@ state machine explicitly defines allowed edges; API handlers do not mutate state
 admin activation, review queue/resolve, retry processing, and `GET /health`. FastAPI Swagger
 UI is the initial operator/client interface.
 
-Phase 3 implements request creation and status, workflow list, workflow versions, and health.
-The new request and an equivalent idempotent replay return HTTP 202 and 200 respectively;
-replay responses carry `Idempotency-Replayed: true`. Request status remains `RECEIVED`, with
-no decision until later workflow execution.
+Phase 4 provides request creation/status, explicit execution trigger, workflow/version reads,
+and health. Intake contracts remain 202 for new requests and 200 for equivalent replay. The
+execute endpoint returns current persisted state; repeated triggers do not duplicate decisions
+or external effects while a claim is live or after completion.
+
+## Implemented lifecycle
+
+`RECEIVED -> PROCESSING`; `PROCESSING -> APPROVED | REJECTED | MANUAL_REVIEW | RETRY_WAIT |
+FAILED`; `RETRY_WAIT -> PROCESSING | FAILED`. MANUAL_REVIEW is held for Phase 5 resolution.
+Request and execution rows share one canonical status. State and audit sequence changes commit
+atomically. Intermediate stage movements are audited with `PROCESSING` as both old and new
+state.
 
 ## Reliability boundary
 
 The MVP assumes one application/retry worker against SQLite. The current engine acquires
-SQLite's write reservation at transaction start, so writes serialize. Persisted retries survive
-process restart, but a crash after an external side effect and before local commit can repeat
-the call. Stable operation keys and an idempotent simulator reduce that risk; true exactly
-once behavior requires cooperation from the dependency.
+SQLite's write reservation at transaction start, so writes serialize. Retry and execution
+leases recover after expiry, but a crash after provider success and before local commit can
+repeat the call. Stable operation keys reduce that risk only if the dependency honors them;
+true exactly-once behavior is not promised.

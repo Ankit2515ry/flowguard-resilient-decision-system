@@ -67,11 +67,29 @@ workflow snapshot prevents requests from pinning an absent version.
 
 ## Retry worker
 
-Select due jobs, process with a bounded attempt policy, and update job plus workflow/audit
-state transactionally. Stable operation key is derived from request, stage and operation
-identity. The initial worker is single-process; without leases, running multiple workers is
-unsupported. On restart, due persisted jobs can resume. A crash around external side effects
-can repeat a call.
+`RetryPolicy.max_attempts` includes the initial external attempt. For attempt `n` that fails,
+the next delay is `min(max_delay, base_delay * 2^(n-1))`. Provider calls return typed success,
+retryable, category and message fields. Unexpected adapter exceptions become retryable
+technical failures; they never become rule rejection.
+
+The executor claims work by committing a lease token before stage processing. RetryJob records
+are unique per execution/stage and operation key. Due PENDING or expired CLAIMED jobs are
+claimed transactionally. A retry transitions RETRY_WAIT to PROCESSING, then calls the adapter
+outside the transaction. Success or fallback transition and retry-job completion commit
+together. Lease expiry allows recovery after worker restart; stable operation keys permit
+provider-side deduplication. No heartbeat or distributed exactly-once guarantee is provided.
+
+The initial and retry worker each use fresh SQLAlchemy sessions for every DB transaction and
+never pass a session to a provider. Only one retry worker process is supported.
+
+## Lifecycle and audit
+
+`RECEIVED -> PROCESSING`; `PROCESSING -> APPROVED | REJECTED | MANUAL_REVIEW | RETRY_WAIT |
+FAILED`; `RETRY_WAIT -> PROCESSING | FAILED`. MANUAL_REVIEW is a holding state in this phase.
+Status changes update request and execution together and append the next per-request audit
+sequence in the same transaction. Stage-only movement is recorded as an event with the state
+unchanged. Terminal/holding outcomes create at most one Decision per request; its explanation
+contains pinned config version, rule traces, stage results and external result categories.
 
 ## HTTP mapping
 
