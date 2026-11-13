@@ -30,3 +30,18 @@
 - SQLite default and config directory are documented in `.env.example`; settings are not
   yet loaded by application code.
 - Alembic is deferred unless later schema needs justify it within the deadline.
+
+## Phase 2 choices
+
+- Workflow YAML transitions are explicit triples (`from_stage`, `outcome`, `to_stage`) and
+  are checked against the source stage type. Each workflow must contain exactly one terminal
+  stage for each of `APPROVED`, `REJECTED`, and `MANUAL_REVIEW`.
+- All graph cycles are rejected in the MVP. Every stage must be reachable from the entry,
+  every nonterminal stage must have an outgoing transition, and terminal stages have none.
+- Config models are frozen Pydantic v2 models with tuple collections; bulk loader results are
+  read-only and keyed by `(workflow_id, version)`. A rule change creates a new version.
+- Groups evaluate every child for complete trace output. Rules retain declaration order;
+  when several fail, REJECT takes precedence over MANUAL_REVIEW.
+- Missing ordinary comparison fields produce explicit failed traces and follow that rule's
+  configured failure action. `exists` handles optional presence explicitly. Incompatible
+  comparison types raise `RuleEvaluationError` to prevent silent coercion or decisions.

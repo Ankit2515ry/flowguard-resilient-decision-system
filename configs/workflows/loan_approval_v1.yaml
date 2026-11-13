@@ -1,0 +1,32 @@
+workflow_id: loan_approval
+version: 1
+entry_stage: eligibility
+rule_sets:
+  - id: loan_eligibility
+    rules:
+      - id: minimum_age
+        condition: {field: applicant.age, operator: gte, value: 18}
+        on_failure: REJECT
+      - id: minimum_income
+        condition: {field: applicant.monthly_income, operator: gte, value: 30000}
+        on_failure: REJECT
+      - id: minimum_credit_score
+        condition: {field: applicant.credit_score, operator: gte, value: 700}
+        on_failure: MANUAL_REVIEW
+stages:
+  - {id: eligibility, type: RULE_EVALUATION, rule_set: loan_eligibility}
+  - {id: identity_check, type: EXTERNAL_CALL, operation: identity_verification}
+  - {id: human_review, type: HUMAN_TASK}
+  - {id: approved, type: TERMINAL, outcome: APPROVED}
+  - {id: rejected, type: TERMINAL, outcome: REJECTED}
+  - {id: manual_review, type: TERMINAL, outcome: MANUAL_REVIEW}
+transitions:
+  - {from_stage: eligibility, outcome: SUCCESS, to_stage: identity_check}
+  - {from_stage: eligibility, outcome: REJECT, to_stage: rejected}
+  - {from_stage: eligibility, outcome: MANUAL_REVIEW, to_stage: human_review}
+  - {from_stage: identity_check, outcome: SUCCESS, to_stage: approved}
+  - {from_stage: identity_check, outcome: FAILURE, to_stage: human_review}
+  - {from_stage: identity_check, outcome: MANUAL_REVIEW, to_stage: human_review}
+  - {from_stage: human_review, outcome: APPROVED, to_stage: approved}
+  - {from_stage: human_review, outcome: REJECTED, to_stage: rejected}
+  - {from_stage: human_review, outcome: MANUAL_REVIEW, to_stage: manual_review}

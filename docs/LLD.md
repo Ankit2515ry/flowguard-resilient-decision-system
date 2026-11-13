@@ -2,11 +2,32 @@
 
 ## Rule evaluation contract
 
-Each rule is data: identifier, field/path, allowlisted operator, expected operand and optional
-composition (`all`/`any`). Resolve paths without executing expressions. Validate operand types
-against actual values and operator requirements. Emit stable ordered trace entries containing
-rule ID, actual value, expected value, pass/fail, reason and config version. Invalid syntax or
-incompatible types is a configuration error, never an implicit false decision.
+Each rule is data: identifier, condition and failure action (`REJECT` or `MANUAL_REVIEW`). A
+condition is either a field test (`field`, `operator`, `value`) or a non-empty nested `all` or
+`any` group. Field paths use dot notation. Supported operators are `eq`, `ne`, `gt`, `gte`,
+`lt`, `lte`, `in`, `not_in`, and `exists`. `exists` requires an explicit boolean value, so an
+optional field can be required (`true`) or forbidden (`false`).
+
+Missing fields fail ordinary comparisons with an explicit trace reason; they are never skipped.
+An absent field is distinguishable from a present field whose value is null through `exists`.
+Incompatible actual/expected types raise `RuleEvaluationError` instead of being converted to a
+business decision. Numeric integers and floats are comparable; booleans are not numbers for
+this purpose. Conditions in a group and rules in a set are all evaluated in declaration order
+to produce complete traces. If multiple rules fail, `REJECT` takes precedence over
+`MANUAL_REVIEW` independent of order. Trace entries report rule ID, expression reference,
+operator, actual/expected value, pass/fail, failure action, reason and configuration version.
+
+## YAML workflow shape
+
+A file contains `workflow_id`, positive integer `version`, `entry_stage`, `rule_sets`, `stages`,
+and `transitions`. Stages are typed as `RULE_EVALUATION`, `EXTERNAL_CALL`, `HUMAN_TASK`, or
+`TERMINAL`. Rule evaluation stages name a rule set; external stages name an operation;
+terminal stages declare one of `APPROVED`, `REJECTED`, or `MANUAL_REVIEW`. A transition is
+`from_stage` + `outcome` + `to_stage`. The loader rejects duplicate YAML keys, IDs, missing
+references, invalid event/type combinations, unreachable nodes, and every directed cycle.
+Cycles are unsupported in this MVP, so there are no exceptions to the acyclic graph rule.
+Definitions use frozen Pydantic models and tuple collections; loaded config versions are
+returned in a read-only mapping keyed by `(workflow_id, version)`.
 
 ## Workflow contract
 

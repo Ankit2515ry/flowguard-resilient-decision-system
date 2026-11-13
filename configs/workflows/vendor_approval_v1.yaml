@@ -1,0 +1,35 @@
+workflow_id: vendor_approval
+version: 1
+entry_stage: vendor_eligibility
+rule_sets:
+  - id: vendor_eligibility
+    rules:
+      - id: valid_registration
+        condition: {field: vendor.registration_status, operator: eq, value: VALID}
+        on_failure: REJECT
+      - id: compliance_checks
+        condition:
+          all:
+            - {field: vendor.compliance.tax_clearance, operator: eq, value: true}
+            - {field: vendor.compliance.sanctions_clear, operator: eq, value: true}
+        on_failure: MANUAL_REVIEW
+      - id: minimum_turnover
+        condition: {field: vendor.annual_turnover, operator: gte, value: 500000}
+        on_failure: MANUAL_REVIEW
+stages:
+  - {id: vendor_eligibility, type: RULE_EVALUATION, rule_set: vendor_eligibility}
+  - {id: external_verification, type: EXTERNAL_CALL, operation: vendor_verification}
+  - {id: human_review, type: HUMAN_TASK}
+  - {id: approved, type: TERMINAL, outcome: APPROVED}
+  - {id: rejected, type: TERMINAL, outcome: REJECTED}
+  - {id: manual_review, type: TERMINAL, outcome: MANUAL_REVIEW}
+transitions:
+  - {from_stage: vendor_eligibility, outcome: SUCCESS, to_stage: external_verification}
+  - {from_stage: vendor_eligibility, outcome: REJECT, to_stage: rejected}
+  - {from_stage: vendor_eligibility, outcome: MANUAL_REVIEW, to_stage: human_review}
+  - {from_stage: external_verification, outcome: SUCCESS, to_stage: approved}
+  - {from_stage: external_verification, outcome: FAILURE, to_stage: human_review}
+  - {from_stage: external_verification, outcome: MANUAL_REVIEW, to_stage: human_review}
+  - {from_stage: human_review, outcome: APPROVED, to_stage: approved}
+  - {from_stage: human_review, outcome: REJECTED, to_stage: rejected}
+  - {from_stage: human_review, outcome: MANUAL_REVIEW, to_stage: manual_review}

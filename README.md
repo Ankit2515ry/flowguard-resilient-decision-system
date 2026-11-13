@@ -1,9 +1,9 @@
 # FlowGuard
 
-FlowGuard is a configurable workflow decision platform. This repository currently contains
-the Phase 1 scaffold: a FastAPI application with a health check, package structure,
-architecture documents and a smoke test. Workflow rules, persistence and decision APIs are
-planned work and are not implemented yet.
+FlowGuard is a configurable workflow decision platform. The current implementation includes
+the Phase 1 FastAPI health endpoint and the Phase 2 versioned YAML configuration loader and
+pure rule engine. Persistence, request intake, workflow execution, retries, audit storage,
+review operations and decision APIs are later-phase work and are not implemented yet.
 
 ## Requirements
 
@@ -12,19 +12,23 @@ planned work and are not implemented yet.
 
 ## Install
 
-From the repository root, create and activate a virtual environment, then install the project
-and development dependencies:
+From the repository root in Windows PowerShell, create and activate a Python 3.11 virtual
+environment, then install the project and development dependencies:
 
 ```powershell
-python -m venv .venv
+py -3.11 -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev]"
 ```
 
+If the Python launcher (`py`) is unavailable, use `python -m venv .venv` after confirming
+`python --version` reports Python 3.11 or newer. You can run FlowGuard and its tests without
+activating the environment by invoking `.venv\Scripts\python.exe` directly.
+
 ## Run
 
 ```powershell
-python -m uvicorn app.main:app --reload
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
 Open `http://127.0.0.1:8000/docs` for Swagger UI. Health check: `http://127.0.0.1:8000/health`.
@@ -32,15 +36,18 @@ Open `http://127.0.0.1:8000/docs` for Swagger UI. Health check: `http://127.0.0.
 ## Test
 
 ```powershell
-python -m pytest -q
+.venv\Scripts\python.exe -m pytest -q
 ```
 
 ## Project map
 
 - `app/`: modular application package
-- `configs/workflows/`: workflow configuration examples (to be added in Phase 2)
+- `configs/workflows/`: loan v1/v2 and vendor v1 YAML examples
 - `tests/`: unit, integration and failure test suites
 - `docs/`: architecture and design contracts
 - `project_management/`: phase plan, tasks, decisions, evidence and handoff
 
-See `project_management/HANDOFF.md` for the exact next task. Only Phase 1 is implemented.
+Rule evaluation and loading can be used from `app.engine.config` and `app.engine.rules`.
+`load_workflows()` validates all YAML files under `configs/workflows/`; `evaluate_rules()`
+returns a deterministic outcome and trace. See `docs/LLD.md` for the schema and behavior.
+See `project_management/HANDOFF.md` for the exact next task. Only Phases 1 and 2 are complete.
